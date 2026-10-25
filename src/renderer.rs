@@ -5,12 +5,19 @@ pub struct Renderer {
 }
 impl Renderer {
     pub fn new(display: &Display) -> Result<Self, glium::program::ProgramCreationError> {
-        let program = glium::Program::from_source(
-            display,
-            "#version 140\nin vec3 position; uniform mat4 matrix; out vec3 pos; void main(){pos=position; gl_Position=matrix*vec4(position,1.0);}",
-            "#version 140\nin vec3 pos; uniform vec3 model_color; out vec4 color; void main(){vec3 n=normalize(cross(dFdx(pos),dFdy(pos))); float l=0.28+0.72*abs(dot(n,normalize(vec3(0.4,-0.6,1.0)))); color=vec4(model_color*l,1.0);}",
-            None,
-        )?;
+        // macOS exposes OpenGL 3.2+ core contexts with GLSL 1.50.
+        let version = if cfg!(target_os = "macos") {
+            "150"
+        } else {
+            "140"
+        };
+        let vertex = format!(
+            "#version {version}\nin vec3 position; uniform mat4 matrix; out vec3 pos; void main(){{pos=position; gl_Position=matrix*vec4(position,1.0);}}"
+        );
+        let fragment = format!(
+            "#version {version}\nin vec3 pos; uniform vec3 model_color; out vec4 color; void main(){{vec3 n=normalize(cross(dFdx(pos),dFdy(pos))); float l=0.28+0.72*abs(dot(n,normalize(vec3(0.4,-0.6,1.0)))); color=vec4(model_color*l,1.0);}}"
+        );
+        let program = glium::Program::from_source(display, &vertex, &fragment, None)?;
         Ok(Self { program })
     }
     pub fn draw<S: Surface>(

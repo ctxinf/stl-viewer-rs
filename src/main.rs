@@ -104,11 +104,13 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     let attributes = winit::window::Window::default_attributes()
         .with_window_icon(Some(icon))
         .with_visible(screenshot.is_none());
+    #[cfg(target_os = "linux")]
     let attributes = winit::platform::x11::WindowAttributesExtX11::with_name(
         attributes,
         "stl-viewer-linux",
         "stl-viewer-linux",
     );
+    #[cfg(target_os = "linux")]
     let attributes = winit::platform::wayland::WindowAttributesExtWayland::with_name(
         attributes,
         "stl-viewer-linux",

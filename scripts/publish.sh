@@ -6,10 +6,10 @@ cargo fmt --check
 cargo test --locked
 cargo clippy --locked --all-targets -- -D warnings
 # Explicit allowlist prevents local dotfiles or user models from being published.
-git add .gitignore Cargo.toml Cargo.lock LICENSE README.md src scripts packaging .github tests docs
+git add .gitignore Cargo.toml Cargo.lock LICENSE README.md README.zh-CN.md src scripts packaging .github tests docs
 git diff --cached --check
 if ! git diff --cached --quiet; then
-  git -c user.name='STL Viewer contributors' -c user.email='contributors@example.invalid' commit -m 'Implement native STL viewer and Linux release automation'
+  git -c user.name='STL Viewer contributors' -c user.email='contributors@example.invalid' commit -m 'Add cross-platform and ARM64 support for STL Viewer'
 fi
 [[ -z "$(git status --porcelain)" ]] || { echo 'Untracked or modified files remain; review before publishing.' >&2; exit 1; }
 version=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)

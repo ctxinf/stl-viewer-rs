@@ -12,7 +12,7 @@
 - **内存占用：约 64 MiB**
 - **可以在 10 ms 内启动打开（⚡ Rust + egui）**（CLI 加载耗时比 Bambu Studio 减少约 99%）
 
-极度精简、启动飞快的原生 Linux STL viewer，支持 Wayland / X11。
+极度精简、启动飞快的原生 STL 查看器。0.4.x 支持 Linux（Wayland / X11）、Windows 和 macOS，以及 x86_64 / ARM64 架构。
 
 三个 STL 样本的 CLI 启动及文件加载耗时：
 
@@ -24,6 +24,16 @@
 
 ## 安装
 
-从 [GitHub Releases](https://github.com/ctxinf/stl-viewer-rs/releases/latest) 下载对应的 x86_64 安装包，用系统软件安装器打开安装：Debian / Ubuntu 选 `.deb`，Fedora 选 `.rpm`，Arch / Manjaro 选 `.pkg.tar.zst`。需要 glibc 2.35+ 和 OpenGL 3.1+。
+从 [GitHub Releases](https://github.com/ctxinf/stl-viewer-rs/releases/latest) 选择对应系统及架构的 0.4.x 安装包：
+
+| 平台 | 架构 | 安装包 |
+| --- | --- | --- |
+| Linux | x86_64、ARM64（aarch64 / arm64） | Debian / Ubuntu：`.deb`；Fedora：`.rpm`；Arch / Arch Linux ARM：`.pkg.tar.zst`；通用：`.tar.gz` |
+| Windows | x86_64、ARM64 | 解压 `.zip`，运行 `stl-viewer.exe` |
+| macOS | Intel、Apple Silicon | 解压 `.zip`，将 `STL Viewer.app` 移入“应用程序” |
+
+Linux 需要 glibc 2.35+ 和 OpenGL 3.1+；macOS 需要 OpenGL 3.2+；Windows 需要提供 OpenGL 3.1+ 的显卡驱动。ARM 指 64 位 ARM，不包含 ARMv7。macOS 包仅作本地签名，未经过 Apple 公证，首次启动可能被 Gatekeeper 拦截；Windows 包未作代码签名。
+
+体积、内存和加载耗时为此前 Linux x86_64 测量结果，其他平台和架构可能不同。源码构建：`cargo build --release --locked`。为兼容现有用户，Cargo 包名和源码生成的可执行文件仍为 `stl-viewer-linux`（Windows 为 `.exe`）。
 
 通过 **View → Colors** 设置背景色和模型色，设置会自动保存，并应用于导出的截图。标准 STL 文件只包含几何数据，不包含模型颜色。
