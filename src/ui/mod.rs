@@ -1,3 +1,4 @@
+pub mod scale_bar;
 mod view_cube;
 use crate::{
     app::{Action, AppState, ModelState},
@@ -11,6 +12,7 @@ pub struct Ui {
     pub menu_height: f32,
     pub cube: view_cube::ViewCube,
     pub hud_rect: Option<egui::Rect>,
+    pub unit: scale_bar::Unit,
 }
 impl Ui {
     pub fn modal(&self) -> bool {
@@ -57,6 +59,15 @@ impl Ui {
                     }
                     ui.checkbox(&mut app.show_cube, "Orientation cube");
                     ui.checkbox(&mut app.show_scale, "Scale bar");
+                    ui.menu_button("Input model units", |ui| {
+                        for unit in scale_bar::Unit::ALL {
+                            ui.selectable_value(&mut self.unit, unit, unit.label());
+                        }
+                        ui.label("Interpretation of input coordinates");
+                        if let Some(mm) = self.unit.millimeters_per_unit() {
+                            ui.label(format!("1 STL unit = {mm} mm"));
+                        }
+                    });
                 });
                 ui.menu_button("Help", |ui| {
                     if ui.button("Controls    F1").clicked() {
@@ -100,6 +111,33 @@ impl Ui {
                         }
                     });
                 self.hud_rect = Some(hud.response.rect);
+            }
+        }
+        if app.show_scale
+            && let Some(model) = model
+        {
+            let screen = ctx.content_rect();
+            let p = ctx.pixels_per_point();
+            let height = ((screen.height() - self.menu_height) * p).round().max(1.) as u32;
+            let target = (screen.width() - 24.).clamp(0., 130.);
+            if target >= 40. && screen.height() > self.menu_height + 44. {
+                egui::Area::new("scale".into())
+                    .order(egui::Order::Background)
+                    .fixed_pos(egui::pos2(screen.left() + 12., screen.bottom() - 38.))
+                    .show(ctx, |ui| {
+                        ui.set_width(target);
+                        scale_bar::draw(
+                            ui,
+                            scale_bar::calculate(
+                                model.radius,
+                                app.camera.vertical_span(),
+                                height,
+                                p,
+                                target,
+                            ),
+                            self.unit,
+                        );
+                    });
             }
         }
         egui::Window::new("Controls").open(&mut self.help).resizable(false).show(ctx,|ui| {
