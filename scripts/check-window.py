@@ -78,18 +78,43 @@ xdo("mousedown", 1)
 xdo("mousemove", "--window", window, 300, 450)
 xdo("mouseup", 1)
 changed(face, capture("cube-drag"), "Cube drag did not orbit")
+# Both origins must apply exactly the same scene controls.
+for button in (1, 3):
+    key("r")
+    xdo("mousemove", "--window", window, 72, 656)
+    xdo("mousedown", button)
+    xdo("mousemove", "--window", window, 112, 676)
+    xdo("mouseup", button)
+    from_cube = capture(f"cube-unified-{button}")
+    key("r")
+    xdo("mousemove", "--window", window, 400, 350)
+    xdo("mousedown", button)
+    xdo("mousemove", "--window", window, 440, 370)
+    xdo("mouseup", button)
+    from_scene = capture(f"scene-unified-{button}")
+    assert ImageChops.difference(from_cube.crop((200, 40, 1000, 720)), from_scene.crop((200, 40, 1000, 720))).getbbox() is None, "Cube and scene drag differ"
+key("r")
+xdo("mousemove", "--window", window, 72, 656)
+xdo("click", 4)
+wheel_cube = capture("cube-wheel")
+key("r")
+xdo("mousemove", "--window", window, 400, 350)
+xdo("click", 4)
+wheel_scene = capture("scene-wheel")
+assert ImageChops.difference(wheel_cube.crop((200, 40, 1000, 720)), wheel_scene.crop((200, 40, 1000, 720))).getbbox() is None, "Cube and scene wheel differ"
+assert wheel_scene.getpixel((16, 602)) == (49, 55, 65), "Cube backing is not opaque"
 key("r")
 xdo("mousemove", "--window", window, 400, 350)
 scale_base = capture("scale-base")
 xdo("click", 4)
 scale_zoom = capture("scale-zoom")
-changed(scale_base.crop((0, 720, 180, 760)), scale_zoom.crop((0, 720, 180, 760)), "Scale did not follow zoom")
+changed(scale_base.crop((0, 720, 180, 760)), scale_zoom.crop((0, 720, 180, 760)), "Zoom percentage did not follow zoom")
 key("r")
 xdo("mousedown", 3)
 xdo("mousemove", "--window", window, 500, 380)
 xdo("mouseup", 3)
 scale_pan = capture("scale-pan")
-assert ImageChops.difference(scale_base.crop((0, 720, 180, 760)), scale_pan.crop((0, 720, 180, 760))).getbbox() is None, "Pan moved scale HUD"
+assert ImageChops.difference(scale_base.crop((0, 720, 180, 760)), scale_pan.crop((0, 720, 180, 760))).getbbox() is None, "Pan moved zoom HUD"
 key("r")
 
 # Focus loss clears the scene drag even if its release arrives elsewhere.
@@ -117,4 +142,4 @@ start = cpu_ticks()
 time.sleep(1)
 assert cpu_ticks() - start <= max(3, os.sysconf("SC_CLK_TCK") // 20), "Idle redraw consumes CPU"
 key("Escape")
-print(f"PASS: {blue} geometry pixels; wireframe, reset, orbit, pan, zoom, resize, menus, dialogs, cube, scale, focus loss, narrow, idle, exit")
+print(f"PASS: {blue} geometry pixels; wireframe, reset, orbit, pan, zoom, resize, menus, dialogs, cube, unified drag, zoom percentage, focus loss, narrow, idle, exit")

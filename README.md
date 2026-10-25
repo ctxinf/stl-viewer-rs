@@ -6,10 +6,10 @@ Rust 编写的轻量 STL 查看器，使用 winit 原生窗口和 OpenGL GPU 渲
 - 只读 mmap 输入，连续顶点数组，一次上传 GPU；几何着色从屏幕导数计算，不构建拓扑或额外法线缓冲。
 - 事件驱动绘制，静止时等待事件，不运行持续刷新循环。
 - 文件选择、拖放、文件管理器关联、线框、旋转、平移、缩放。
-- File / View / Help 菜单、六面标准视角、可点击与拖动的方位立方体、屏幕比例尺。
+- File / View / Help 菜单、六面标准视角、可点击切换视角的方位立方体、缩放百分比。
 - `.deb`、`.rpm`、Arch `.pkg.tar.zst` 和通用 tar 包。
 
-当前状态：本地 release 编译、严格 Clippy、16 个相机、解析器、方位投影和比例尺单元测试及 X11 实际像素与交互检查通过，原生 Wayland 桌面及 headless Weston 首帧图像提交通过。安装包和远程 Actions 尚未验证。仓库不附带跨设备性能保证；应在目标机器上实测。
+当前状态：本地 release 编译、严格 Clippy、11 个相机、解析器和方位投影单元测试及 X11 实际像素与交互检查通过，原生 Wayland 桌面及 headless Weston 首帧图像提交通过。安装包和远程 Actions 尚未验证。仓库不附带跨设备性能保证；应在目标机器上实测。
 
 ## 安装
 
@@ -42,11 +42,12 @@ stl-viewer-linux --info model.stl # 无窗口解析计时、三角形数量和�
 | O / Ctrl+O | 打开文件 |
 | R | 恢复视角 |
 | W | 实体 / 线框 |
-| 方位立方体面点击 / 拖动 | 标准视角 / 轨迹球旋转 |
+| 方位立方体面点击 | 标准视角 |
+| 方位控件上拖动 / 滚轮 | 与背景相同：左键旋转、右键平移、滚轮缩放 |
 | F1 | 操作说明 |
 | Esc | 先关闭菜单或弹窗，再退出 |
 
-STL 没有可靠的单位字段，默认将输入坐标的 1 单位解释为 1 mm。View → Input model units 可改为原始单位、mm、cm、m 或 inch；这会改变输入单位解释和比例标注，保持当前画面尺寸。比例尺显示正交投影下的屏幕距离，不是表面测量或显示器上的物理厘米。选择标准视角保留平移与缩放；Reset / Fit 恢复等轴视角、居中和缩放。
+STL 保存顶点坐标及相对长度，但没有可靠的物理单位信息，无法仅凭文件确认 mm 或 inch。界面显示缩放百分比：初始适配大小为 100%，R / Reset / Fit 恢复到 100%。选择标准视角保留平移与缩放。View 菜单可分别控制方位控件和缩放百分比的显示。
 
 读取时请勿同时修改或截断源文件。模型加载目前同步执行，超大文件加载期间窗口可能短暂无响应。标题栏计时包含解析和 GPU 缓冲创建，不包含进程启动和第一帧显示。内存需求约为每三角形 36 字节 CPU 顶点数据与同等 GPU 缓冲，另加映射文件和驱动开销。
 
@@ -62,7 +63,7 @@ rustc --edition 2024 --test src/mesh.rs -o /tmp/stl-mesh-tests
 /tmp/stl-mesh-tests
 ```
 
-Linux 构建需要 C 编译器、pkg-config、Wayland / XKB / X11 / EGL / OpenGL 开发包。CI 在 Ubuntu 22.04 构建以降低 glibc 版本要求；以软件 OpenGL 执行 X11 实际像素及窗口交互测试（需 ImageMagick、Pillow 和 xdotool），包含菜单/弹窗输入隔离、方位控件、比例尺、失焦和窄窗口检查，另测 100% / 150% / 200% DPI；以 headless Weston 检查 Wayland 窗口首帧图像缓冲提交。Wayland 检查不替代真实桌面的视觉与输入验证。
+Linux 构建需要 C 编译器、pkg-config、Wayland / XKB / X11 / EGL / OpenGL 开发包。CI 在 Ubuntu 22.04 构建以降低 glibc 版本要求；以软件 OpenGL 执行 X11 实际像素及窗口交互测试（需 ImageMagick、Pillow 和 xdotool），包含菜单/弹窗输入隔离、方位控件统一拖动、缩放百分比、失焦和窄窗口检查，另测 100% / 150% / 200% DPI；以 headless Weston 检查 Wayland 窗口首帧图像缓冲提交。Wayland 检查不替代真实桌面的视觉与输入验证。
 
 Actions 会运行格式检查、Clippy、解析测试、release 编译、窗口冒烟测试和打包。推送 `vX.Y.Z` 标签后，仅当所有构建步骤成功，才将安装包及 SHA256SUMS 上传到 GitHub Release。版本标签必须与 Cargo.toml 一致。Cargo.lock 已生成，固定完整依赖树；CI 使用 `--locked` 检查和构建。
 

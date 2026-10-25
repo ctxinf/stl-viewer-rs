@@ -1,4 +1,3 @@
-pub mod scale_bar;
 mod view_cube;
 use crate::{
     app::{Action, AppState, ModelState},
@@ -12,7 +11,6 @@ pub struct Ui {
     pub menu_height: f32,
     pub cube: view_cube::ViewCube,
     pub hud_rect: Option<egui::Rect>,
-    pub unit: scale_bar::Unit,
     pub viewport: ViewportRect,
 }
 impl Ui {
@@ -62,16 +60,7 @@ impl Ui {
                             actions.push(Action::ToggleWireframe);
                         }
                         ui.checkbox(&mut app.show_cube, "Orientation cube");
-                        ui.checkbox(&mut app.show_scale, "Scale bar");
-                        ui.menu_button("Input model units", |ui| {
-                            for unit in scale_bar::Unit::ALL {
-                                ui.selectable_value(&mut self.unit, unit, unit.label());
-                            }
-                            ui.label("Interpretation of input coordinates");
-                            if let Some(mm) = self.unit.millimeters_per_unit() {
-                                ui.label(format!("1 STL unit = {mm} mm"));
-                            }
-                        });
+                        ui.checkbox(&mut app.show_zoom, "Zoom percentage");
                     });
                     ui.menu_button("Help", |ui| {
                         if ui.button("Controls    F1").clicked() {
@@ -119,35 +108,23 @@ impl Ui {
                 self.hud_rect = Some(hud.response.rect);
             }
         }
-        if app.show_scale
-            && let Some(model) = model
-        {
+        if app.show_zoom && model.is_some() {
             let screen = ctx.content_rect();
-            let p = ctx.pixels_per_point();
-            let height = self.viewport.height;
-            let target = (screen.width() - 24.).clamp(0., 130.);
-            if target >= 40. && screen.height() > self.menu_height + 44. {
-                egui::Area::new("scale".into())
+            if screen.height() > self.menu_height + 44. {
+                egui::Area::new("zoom".into())
                     .order(egui::Order::Background)
-                    .fixed_pos(egui::pos2(screen.left() + 12., screen.bottom() - 38.))
+                    .fade_in(false)
+                    .fixed_pos(egui::pos2(screen.left() + 12., screen.bottom() - 32.))
                     .show(ctx, |ui| {
-                        ui.set_width(target);
-                        scale_bar::draw(
-                            ui,
-                            scale_bar::calculate(
-                                model.radius,
-                                app.camera.vertical_span(),
-                                height,
-                                p,
-                                target,
-                            ),
-                            self.unit,
+                        ui.colored_label(
+                            egui::Color32::from_rgb(255, 196, 112),
+                            format!("Zoom {:.0}%", app.camera.zoom * 100.),
                         );
                     });
             }
         }
         egui::Window::new("Controls").open(&mut self.help).resizable(false).show(ctx,|ui| {
-            ui.label("Left drag: orbit · Right drag: pan · Wheel: zoom\nO / Ctrl+O: open · R: reset / fit · W: wireframe\nF1: controls · Esc: close menus / dialogs, then exit\nCube: click a face for a standard view; drag to orbit.\nSTL has no units. Default: 1 STL unit = 1 mm.\nUnits interpret input coordinates; they do not resize the model.\nThe orthographic scale bar shows screen distance, not surface measurements.");
+            ui.label("Left drag: orbit · Right drag: pan · Wheel: zoom\nO / Ctrl+O: open · R: reset / fit · W: wireframe\nF1: controls · Esc: close menus / dialogs, then exit\nCube: click a face for a standard view. Drag and wheel work as in the scene.\nZoom: 100% is the initial fitted size; R restores 100%.\nSTL stores coordinates without reliable physical units.");
         });
         egui::Window::new("About")
             .open(&mut self.about)

@@ -19,7 +19,7 @@ pub struct AppState {
     pub camera: crate::camera::Camera,
     pub wire: bool,
     pub show_cube: bool,
-    pub show_scale: bool,
+    pub show_zoom: bool,
 }
 impl Default for AppState {
     fn default() -> Self {
@@ -27,7 +27,7 @@ impl Default for AppState {
             camera: Default::default(),
             wire: false,
             show_cube: true,
-            show_scale: true,
+            show_zoom: true,
         }
     }
 }
