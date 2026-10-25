@@ -1,9 +1,13 @@
+mod app;
+mod camera;
 mod mesh;
+mod renderer;
+use camera::{Camera, ViewportRect};
 use mesh::Vertex;
 glium::implement_vertex!(Vertex, position);
-use glam::{Mat4, Vec3};
+
 use glium::{
-    Surface, uniform,
+    Surface,
     winit::{
         self,
         event::{ElementState, Event, MouseButton, MouseScrollDelta, WindowEvent},
@@ -57,20 +61,14 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         .with_title("STL Viewer — O: open / drop an STL")
         .with_inner_size(1000, 760)
         .build(&event_loop);
-    let program = glium::Program::from_source(
-        &display,
-        "#version 140\nin vec3 position; uniform mat4 matrix; out vec3 pos; void main(){pos=position; gl_Position=matrix*vec4(position,1.0);}",
-        "#version 140\nin vec3 pos; out vec4 color; void main(){vec3 n=normalize(cross(dFdx(pos),dFdy(pos))); float l=0.28+0.72*abs(dot(n,normalize(vec3(0.4,-0.6,1.0)))); color=vec4(vec3(0.32,0.68,0.88)*l,1.0);}",
-        None,
-    )?;
+    let renderer = renderer::Renderer::new(&display)?;
     let mut buffer = None;
-    let (mut yaw, mut pitch, mut zoom) = (0.5f32, -0.5f32, 1.0f32);
-    let mut pan = [0f32; 2];
+    let mut camera = Camera::default();
     let mut cursor = None;
     let mut left = false;
     let mut right = false;
     let mut wire = false;
-    let load = |path: PathBuf| -> Result<glium::VertexBuffer<mesh::Vertex>, String> {
+    let load = |path: PathBuf| -> Result<app::ModelState, String> {
         let start = Instant::now();
         let mesh = open_mesh(&path)?;
         let buffer =
@@ -81,7 +79,13 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             mesh.vertices.len() / 3,
             start.elapsed().as_secs_f64() * 1000.
         ));
-        Ok(buffer)
+        Ok(app::ModelState {
+            buffer,
+            triangles: mesh.vertices.len() / 3,
+            center: mesh.center,
+            radius: mesh.radius,
+            bounds: mesh.bounds,
+        })
     };
     if let Some(path) = first {
         match load(path.into()) {
@@ -128,13 +132,12 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                     let dx = (position.x - x) as f32;
                     let dy = (position.y - y) as f32;
                     if left {
-                        yaw += dx * 0.008;
-                        pitch = (pitch + dy * 0.008).clamp(-1.55, 1.55);
+                        camera.orbit(dx, dy);
                     }
                     if right {
                         let h = window.inner_size().height.max(1) as f32;
-                        pan[0] += dx / h * 2.8 / zoom;
-                        pan[1] -= dy / h * 2.8 / zoom;
+                        camera.pan[0] += dx / h * 2.8 / camera.zoom;
+                        camera.pan[1] -= dy / h * 2.8 / camera.zoom;
                     }
                     if left || right {
                         window.request_redraw();
@@ -147,7 +150,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                     MouseScrollDelta::LineDelta(_, y) => y,
                     MouseScrollDelta::PixelDelta(p) => p.y as f32 / 40.,
                 };
-                zoom = (zoom * (d * 0.12).exp()).clamp(0.02, 100.);
+                camera.zoom = (camera.zoom * (d * 0.12).exp()).clamp(0.02, 100.);
                 window.request_redraw();
             }
             WindowEvent::KeyboardInput { event, .. }
@@ -156,10 +159,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                 match event.physical_key {
                     PhysicalKey::Code(KeyCode::Escape) => target.exit(),
                     PhysicalKey::Code(KeyCode::KeyR) => {
-                        yaw = 0.5;
-                        pitch = -0.5;
-                        zoom = 1.;
-                        pan = [0.; 2];
+                        camera = Camera::default();
                     }
                     PhysicalKey::Code(KeyCode::KeyW) => wire = !wire,
                     PhysicalKey::Code(KeyCode::KeyO) => {
@@ -179,38 +179,16 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                 let mut frame = display.draw();
                 frame.clear_color_and_depth((0.055, 0.065, 0.085, 1.), 1.);
                 if let Some(buffer) = &buffer {
-                    let aspect = size.width as f32 / size.height as f32;
-                    let matrix = Mat4::orthographic_rh_gl(
-                        -1.4 * aspect / zoom,
-                        1.4 * aspect / zoom,
-                        -1.4 / zoom,
-                        1.4 / zoom,
-                        0.01,
-                        100.,
-                    ) * Mat4::look_at_rh(Vec3::new(0., 0., 5.), Vec3::ZERO, Vec3::Y)
-                        * Mat4::from_translation(Vec3::new(pan[0], pan[1], 0.))
-                        * Mat4::from_rotation_x(pitch)
-                        * Mat4::from_rotation_z(yaw);
-                    let params = glium::DrawParameters {
-                        depth: glium::Depth {
-                            test: glium::DepthTest::IfLess,
-                            write: true,
-                            ..Default::default()
-                        },
-                        polygon_mode: if wire {
-                            glium::draw_parameters::PolygonMode::Line
-                        } else {
-                            glium::draw_parameters::PolygonMode::Fill
-                        },
-                        ..Default::default()
+                    let viewport = ViewportRect {
+                        left: 0,
+                        bottom: 0,
+                        width: size.width,
+                        height: size.height,
                     };
-                    if let Err(e) = frame.draw(
-                        buffer,
-                        glium::index::NoIndices(glium::index::PrimitiveType::TrianglesList),
-                        &program,
-                        &uniform! {matrix:matrix.to_cols_array_2d()},
-                        &params,
-                    ) {
+                    let matrix = camera.matrix(viewport);
+                    if let Err(e) =
+                        renderer.draw(&mut frame, &buffer.buffer, matrix, viewport, wire)
+                    {
                         eprintln!("Render failed: {e}");
                         target.exit();
                     }
@@ -226,10 +204,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             match load(path) {
                 Ok(b) => {
                     buffer = Some(b);
-                    yaw = 0.5;
-                    pitch = -0.5;
-                    zoom = 1.;
-                    pan = [0.; 2];
+                    camera = Camera::default();
                 }
                 Err(e) => {
                     window.set_title(&format!("STL Viewer — {e} — O to retry"));

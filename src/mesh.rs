@@ -5,8 +5,9 @@ pub struct Vertex {
 
 pub struct Mesh {
     pub vertices: Vec<Vertex>,
-    pub center: [f32; 3],
-    pub radius: f32,
+    pub center: [f64; 3],
+    pub bounds: [[f64; 3]; 2],
+    pub radius: f64,
 }
 impl Mesh {
     pub fn parse(data: &[u8]) -> Result<Self, String> {
@@ -93,24 +94,25 @@ impl Mesh {
                 hi[i] = hi[i].max(v.position[i]);
             }
         }
-        let center = std::array::from_fn(|i| (lo[i] as f64 * 0.5 + hi[i] as f64 * 0.5) as f32);
+        let center = std::array::from_fn(|i| lo[i] as f64 * 0.5 + hi[i] as f64 * 0.5);
         let radius = (0..3)
             .map(|i| ((hi[i] as f64 - lo[i] as f64) * 0.5).powi(2))
             .sum::<f64>()
             .sqrt();
-        if radius == 0. || radius > f32::MAX as f64 {
+        if radius == 0. || !radius.is_finite() {
             return Err("Degenerate or oversized model bounds".into());
         }
         // Normalize once on the CPU; every subsequent interaction only updates a matrix.
         for v in &mut vertices {
             for (i, value) in v.position.iter_mut().enumerate() {
-                *value = ((*value as f64 - center[i] as f64) / radius) as f32;
+                *value = ((*value as f64 - center[i]) / radius) as f32;
             }
         }
         Ok(Self {
             vertices,
             center,
-            radius: radius as f32,
+            radius,
+            bounds: [lo.map(f64::from), hi.map(f64::from)],
         })
     }
 }
