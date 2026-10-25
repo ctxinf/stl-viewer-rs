@@ -64,6 +64,43 @@ fn sphere(p: Pos2, rect: Rect) -> Vec3 {
         Vec3::new(v.x, -v.y, 0.).normalize()
     }
 }
+// Map glyph vertices onto the same orthographic face plane as the cube.
+// Keeping the text in world space makes its tilt and foreshortening match the face.
+fn face_label(ui: &egui::Ui, rotation: Quat, rect: Rect, view: View) {
+    let normal = view.direction();
+    let u = if normal.z.abs() > 0.5 {
+        Vec3::X
+    } else {
+        Vec3::Z.cross(normal)
+    };
+    let v = normal.cross(u);
+    let galley = ui.painter().layout_no_wrap(
+        view.name().to_owned(),
+        egui::FontId::proportional(12.),
+        Color32::from_gray(48),
+    );
+    let size = galley.size();
+    let fit = (42. / size.x).min(1.);
+    let shape = egui::Shape::galley(Pos2::ZERO, galley, Color32::from_gray(48));
+    let primitives = ui.ctx().tessellate(
+        vec![egui::epaint::ClippedShape {
+            clip_rect: Rect::EVERYTHING,
+            shape,
+        }],
+        ui.ctx().pixels_per_point(),
+    );
+    let scale = rect.width().min(rect.height()) * 0.23;
+    for primitive in primitives {
+        if let egui::epaint::Primitive::Mesh(mut mesh) = primitive.primitive {
+            for vertex in &mut mesh.vertices {
+                let local = (vertex.pos.to_vec2() - size * 0.5) * fit / 27.;
+                let p = rotation * (normal + u * local.x - v * local.y);
+                vertex.pos = rect.center() + Vec2::new(p.x, -p.y) * scale;
+            }
+            ui.painter().add(egui::Shape::mesh(mesh));
+        }
+    }
+}
 #[derive(Default)]
 pub struct ViewCube {
     previous: Option<Pos2>,
@@ -110,47 +147,43 @@ impl ViewCube {
         let hover = response.hover_pos().and_then(|p| hit(&faces, p));
         for face in &faces {
             let color = if hover == Some(face.view) && enabled {
-                Color32::from_rgb(100, 140, 170)
+                Color32::from_rgb(174, 205, 225)
             } else {
-                Color32::from_gray(65 + (face.depth * 35.) as u8)
+                Color32::from_gray(172 + (face.depth * 44.) as u8)
             };
             ui.painter().add(egui::Shape::convex_polygon(
                 face.points.clone(),
                 color,
-                Stroke::new(1., Color32::LIGHT_GRAY),
+                Stroke::new(0.7, Color32::from_gray(190)),
             ));
-            let center = face
-                .points
-                .iter()
-                .fold(Vec2::ZERO, |sum, p| sum + p.to_vec2())
-                / 4.;
-            if face.depth > 0.22 {
-                ui.painter().text(
-                    center.to_pos2(),
-                    egui::Align2::CENTER_CENTER,
-                    face.view.name(),
-                    egui::FontId::proportional(11.),
-                    Color32::WHITE,
-                );
+            if face.depth > 0.18 {
+                face_label(ui, camera.rotation, rect, face.view);
             }
         }
-        let origin = rect.left_bottom() + Vec2::new(24., -22.);
+        let scale = rect.width().min(rect.height()) * 0.23;
+        let corner = Vec3::splat(-1.);
+        let project_point = |v: Vec3| {
+            let p = camera.rotation * v;
+            rect.center() + Vec2::new(p.x, -p.y) * scale
+        };
+        let origin = project_point(corner);
         for (axis, label, color) in [
-            (Vec3::X, "X", Color32::LIGHT_RED),
-            (Vec3::Y, "Y", Color32::LIGHT_GREEN),
-            (Vec3::Z, "Z", Color32::LIGHT_BLUE),
+            (Vec3::X, "X", Color32::from_rgb(221, 135, 135)),
+            (Vec3::Y, "Y", Color32::from_rgb(125, 203, 139)),
+            (Vec3::Z, "Z", Color32::from_rgb(144, 153, 224)),
         ] {
-            let p = camera.rotation * axis;
-            let end = origin + Vec2::new(p.x, -p.y) * 19.;
-            ui.painter()
-                .line_segment([origin, end], Stroke::new(2., color));
-            ui.painter().text(
-                end,
-                egui::Align2::CENTER_CENTER,
-                label,
-                egui::FontId::proportional(11.),
-                color,
-            );
+            let end = project_point(corner + axis * 2.65);
+            let delta = end - origin;
+            if delta.length() > 5. {
+                ui.painter().arrow(origin, delta, Stroke::new(2., color));
+                ui.painter().text(
+                    end + delta.normalized() * 8.,
+                    egui::Align2::CENTER_CENTER,
+                    label,
+                    egui::FontId::proportional(12.),
+                    color,
+                );
+            }
         }
         if enabled && !self.canceled && response.clicked() {
             return response.interact_pointer_pos().and_then(|p| hit(&faces, p));
