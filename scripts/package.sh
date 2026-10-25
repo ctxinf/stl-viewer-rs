@@ -26,7 +26,7 @@ Description: Native GPU accelerated STL viewer for Wayland and X11
 CONTROL
 dpkg-deb --root-owner-group --build "$stage" "dist/stl-viewer-linux-${version}-amd64.deb"
 rm -rf "$stage/DEBIAN"
-fpm -s dir -t rpm -n stl-viewer-linux -v "$version" --architecture x86_64 --license MIT --description 'Native GPU accelerated STL viewer' --maintainer 'STL Viewer contributors <contributors@example.invalid>' --depends 'libglvnd-egl' --depends 'libglvnd-glx' --depends libX11 --depends libXcursor --depends libXi --depends libXrandr --depends libxkbcommon --depends libxkbcommon-x11 --depends wayland-libs -C "$stage" -p "dist/stl-viewer-linux-${version}-x86_64.rpm" usr
+fpm -s dir -t rpm -n stl-viewer-linux -v "$version" --architecture x86_64 --license MIT --description 'Native GPU accelerated STL viewer' --maintainer 'STL Viewer contributors <contributors@example.invalid>' --depends 'libglvnd-egl' --depends 'libglvnd-glx' --depends libX11 --depends libXcursor --depends libXi --depends libXrandr --depends libxkbcommon --depends libxkbcommon-x11 --depends wayland-libs-client --depends wayland-libs-egl -C "$stage" -p "dist/stl-viewer-linux-${version}-x86_64.rpm" usr
 # Arch package payload and metadata: directly installable using pacman -U.
 rm -rf "$root/target/arch-root"
 cp -a "$stage" "$root/target/arch-root"

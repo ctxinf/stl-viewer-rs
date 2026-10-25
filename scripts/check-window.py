@@ -7,7 +7,10 @@ from PIL import Image, ImageChops
 
 
 def xdo(*args):
-    return subprocess.check_output(["xdotool", *map(str, args)], text=True).strip()
+    result = subprocess.check_output(["xdotool", *map(str, args)], text=True).strip()
+    # Let the application process each input before sending the next event.
+    time.sleep(0.1)
+    return result
 
 
 window = xdo("search", "--name", "triangle.stl").splitlines()[0]
