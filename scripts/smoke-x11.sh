@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-export WINIT_UNIX_BACKEND=x11 LIBGL_ALWAYS_SOFTWARE=1
+export WINIT_UNIX_BACKEND=x11 WINIT_X11_SCALE_FACTOR=1 LIBGL_ALWAYS_SOFTWARE=1
 unset WAYLAND_DISPLAY
 "${VIEWER_BIN:-target/release/stl-viewer-linux}" target/triangle.stl >target/x11.log 2>&1 &
 pid=$!
