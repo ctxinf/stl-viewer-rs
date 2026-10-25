@@ -86,6 +86,8 @@ pub fn draw(ui: &mut egui::Ui, scale: Option<Scale>, unit: Unit) {
         );
         return;
     };
+    let zero_color = Color32::from_rgb(116, 215, 235);
+    let length_color = Color32::from_rgb(255, 196, 112);
     let start = rect.left_top() + egui::vec2(0., 5.);
     painter.line_segment(
         [start, start + egui::vec2(scale.width, 0.)],
@@ -93,10 +95,24 @@ pub fn draw(ui: &mut egui::Ui, scale: Option<Scale>, unit: Unit) {
     );
     for i in 0..=scale.segments * 2 {
         let x = start.x + scale.width * i as f32 / (scale.segments * 2) as f32;
-        let h = if i % 2 == 0 { 7. } else { 4. };
+        let endpoint = i == 0 || i == scale.segments * 2;
+        let color = if i == 0 {
+            zero_color
+        } else if i == scale.segments * 2 {
+            length_color
+        } else {
+            Color32::WHITE
+        };
+        let h = if endpoint {
+            10.
+        } else if i % 2 == 0 {
+            7.
+        } else {
+            4.
+        };
         painter.line_segment(
             [Pos2::new(x, start.y - 2.), Pos2::new(x, start.y + h)],
-            Stroke::new(1., Color32::WHITE),
+            Stroke::new(if endpoint { 2. } else { 1. }, color),
         );
     }
     let value = if scale.length < 0.001 || scale.length >= 1e6 {
@@ -107,13 +123,28 @@ pub fn draw(ui: &mut egui::Ui, scale: Option<Scale>, unit: Unit) {
             .trim_end_matches('.')
             .to_owned()
     };
+    let font = egui::FontId::proportional(11.);
     painter.text(
-        start + egui::vec2(0., 12.),
+        start + egui::vec2(0., 13.),
         egui::Align2::LEFT_TOP,
-        format!("0       {value} {}", unit.label()),
-        egui::FontId::proportional(11.),
-        Color32::WHITE,
+        "0",
+        font.clone(),
+        zero_color,
     );
+    let label = painter.layout_no_wrap(format!("{value} {}", unit.label()), font, length_color);
+    let end_x = start.x + scale.width;
+    let label_right = end_x.max(start.x + 16. + label.size().x).min(rect.right());
+    let label_pos = Pos2::new(label_right - label.size().x, start.y + 13.);
+    if label_right > end_x + 1. {
+        painter.line_segment(
+            [
+                Pos2::new(end_x, start.y + 10.),
+                Pos2::new(label_right, start.y + 10.),
+            ],
+            Stroke::new(0.8, length_color),
+        );
+    }
+    painter.galley(label_pos, label, length_color);
 }
 #[cfg(test)]
 mod tests {
