@@ -39,7 +39,7 @@ impl View {
         }
     }
 }
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct ViewportRect {
     pub left: u32,
     pub bottom: u32,
@@ -47,6 +47,18 @@ pub struct ViewportRect {
     pub height: u32,
 }
 impl ViewportRect {
+    pub fn below_menu(size: (u32, u32), menu_points: f32, pixels_per_point: f32) -> Self {
+        Self {
+            left: 0,
+            bottom: 0,
+            width: size.0.max(1),
+            height: size
+                .1
+                .saturating_sub((menu_points * pixels_per_point).round() as u32)
+                .max(1),
+        }
+    }
+
     pub fn aspect(self) -> f32 {
         self.width.max(1) as f32 / self.height.max(1) as f32
     }
@@ -63,8 +75,12 @@ impl Default for Camera {
             pan: [0.; 2],
             zoom: 1.,
         };
-        c.set_view(View::Front);
-        c.orbit(60., -45.);
+        c.rotation = Quat::from_mat4(&Mat4::look_at_rh(
+            Vec3::new(1., -1., 1.),
+            Vec3::ZERO,
+            Vec3::Z,
+        ))
+        .normalize();
         c
     }
 }
@@ -119,12 +135,31 @@ mod tests {
         }
     }
     #[test]
+    fn standard_view_preserves_framing() {
+        let mut c = Camera {
+            pan: [0.3, -0.2],
+            zoom: 3.,
+            ..Default::default()
+        };
+        for view in View::ALL {
+            c.set_view(view);
+            assert_eq!(c.pan, [0.3, -0.2]);
+            assert_eq!(c.zoom, 3.);
+        }
+    }
+    #[test]
     fn orbit_normalizes() {
         let mut c = Camera::default();
         for _ in 0..10000 {
             c.orbit(3., 4.);
         }
         assert!((c.rotation.length() - 1.).abs() < 1e-6);
+    }
+    #[test]
+    fn viewport_excludes_menu_at_fractional_dpi() {
+        let v = ViewportRect::below_menu((1500, 1140), 30., 1.5);
+        assert_eq!(v.height, 1095);
+        assert_eq!(ViewportRect::below_menu((1, 1), 30., 2.).height, 1);
     }
     #[test]
     fn viewport_aspect() {

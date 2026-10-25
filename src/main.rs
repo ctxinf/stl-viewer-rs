@@ -4,7 +4,6 @@ mod mesh;
 mod renderer;
 mod ui;
 use app::{Action, AppState};
-use camera::ViewportRect;
 use mesh::Vertex;
 glium::implement_vertex!(Vertex, position);
 
@@ -187,11 +186,9 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                         app.camera.orbit(dx, dy);
                     }
                     if right {
-                        let h = (window.inner_size().height as f32
-                            - ui.menu_height * egui.egui_ctx().pixels_per_point())
-                        .max(1.);
-                        app.camera.pan[0] += dx / h * 2.8 / app.camera.zoom;
-                        app.camera.pan[1] -= dy / h * 2.8 / app.camera.zoom;
+                        let h = ui.viewport.height.max(1) as f32;
+                        app.camera.pan[0] += dx / h * app.camera.vertical_span() as f32;
+                        app.camera.pan[1] -= dy / h * app.camera.vertical_span() as f32;
                     }
                     if left || right {
                         window.request_redraw();
@@ -247,24 +244,18 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                     return;
                 }
                 egui.run(&window, |ctx| {
-                    actions.extend(ui.draw(ctx, &mut app, buffer.as_ref()));
+                    actions.extend(ui.draw(
+                        ctx,
+                        &mut app,
+                        buffer.as_ref(),
+                        (size.width, size.height),
+                    ));
                 });
 
                 let mut frame = display.draw();
                 frame.clear_color_and_depth((0.055, 0.065, 0.085, 1.), 1.);
                 if let Some(buffer) = &buffer {
-                    let viewport = ViewportRect {
-                        left: 0,
-                        bottom: 0,
-                        width: size.width,
-                        height: size
-                            .height
-                            .saturating_sub(
-                                (ui.menu_height * egui.egui_ctx().pixels_per_point()).round()
-                                    as u32,
-                            )
-                            .max(1),
-                    };
+                    let viewport = ui.viewport;
                     let matrix = app.camera.matrix(viewport);
                     if let Err(e) =
                         renderer.draw(&mut frame, &buffer.buffer, matrix, viewport, app.wire)

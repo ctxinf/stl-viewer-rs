@@ -35,6 +35,7 @@ jobs:
           python3 scripts/fixture.py target/triangle.stl
           target/release/stl-viewer-linux --info target/triangle.stl
           xvfb-run -a bash scripts/smoke-x11.sh
+          xvfb-run -a python3 scripts/check-dpi.py
       - name: Wayland smoke test
         run: bash scripts/smoke-wayland.sh
       - name: Package

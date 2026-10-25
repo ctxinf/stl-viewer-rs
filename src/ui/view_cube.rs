@@ -67,16 +67,45 @@ fn sphere(p: Pos2, rect: Rect) -> Vec3 {
 #[derive(Default)]
 pub struct ViewCube {
     previous: Option<Pos2>,
+    canceled: bool,
 }
 impl ViewCube {
     pub fn cancel(&mut self) {
         self.previous = None;
+        self.canceled = true;
     }
     pub fn draw(&mut self, ui: &mut egui::Ui, camera: &mut Camera, enabled: bool) -> Option<View> {
         let (rect, response) = ui.allocate_exact_size(
             Vec2::splat(120.).min(ui.available_size()),
             egui::Sense::click_and_drag(),
         );
+        if !enabled {
+            self.cancel();
+        }
+        if enabled && ui.input(|i| i.pointer.any_pressed()) {
+            self.canceled = false;
+        }
+        if enabled && !self.canceled && response.drag_started() {
+            self.previous = response
+                .interact_pointer_pos()
+                .map(|p| p - response.drag_delta());
+        }
+        if enabled
+            && !self.canceled
+            && response.dragged()
+            && let Some(p) = response.interact_pointer_pos()
+        {
+            if let Some(previous) = self.previous {
+                camera.rotation =
+                    (Quat::from_rotation_arc(sphere(previous, rect), sphere(p, rect))
+                        * camera.rotation)
+                        .normalize();
+            }
+            self.previous = Some(p);
+        }
+        if response.drag_stopped() {
+            self.previous = None;
+        }
         let faces = project(camera.rotation, rect);
         let hover = response.hover_pos().and_then(|p| hit(&faces, p));
         for face in &faces {
@@ -123,30 +152,7 @@ impl ViewCube {
                 color,
             );
         }
-        if !enabled {
-            self.cancel();
-            return None;
-        }
-        if response.drag_started() {
-            self.previous = response
-                .interact_pointer_pos()
-                .map(|p| p - response.drag_delta());
-        }
-        if response.dragged()
-            && let Some(p) = response.interact_pointer_pos()
-        {
-            if let Some(previous) = self.previous {
-                camera.rotation =
-                    (Quat::from_rotation_arc(sphere(previous, rect), sphere(p, rect))
-                        * camera.rotation)
-                        .normalize();
-            }
-            self.previous = Some(p);
-        }
-        if response.drag_stopped() {
-            self.cancel();
-        }
-        if response.clicked() {
+        if enabled && !self.canceled && response.clicked() {
             return response.interact_pointer_pos().and_then(|p| hit(&faces, p));
         }
         None
