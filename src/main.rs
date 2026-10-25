@@ -137,13 +137,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         if response.repaint && !matches!(event, WindowEvent::RedrawRequested) {
             window.request_redraw();
         }
-        let over_hud = cursor.is_some_and(|(x, y)| {
-            ui.hud_rect.is_some_and(|rect| {
-                rect.contains(egui::pos2(x as f32, y as f32) / egui.egui_ctx().pixels_per_point())
-            })
-        });
-        let blocked =
-            ui.modal() || egui.egui_ctx().is_popup_open() || (response.consumed && !over_hud);
+        let blocked = ui.modal() || egui.egui_ctx().is_popup_open() || response.consumed;
         let mut actions = Vec::new();
         let mut open = None;
         match event {

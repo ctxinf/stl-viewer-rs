@@ -69,21 +69,12 @@ key("w")
 key("Escape")
 assert ImageChops.difference(scene, capture("help-closed")).getbbox() is None, "Dialog input changed model"
 
-# A face click selects a standard view; a drag continues outside the HUD.
-xdo("mousemove", "--window", window, 72, 656)
-xdo("click", 1)
-face = capture("cube-face")
-changed(scene.crop((200, 40, 1000, 720)), face.crop((200, 40, 1000, 720)), "Face click did not change camera")
-xdo("mousedown", 1)
-xdo("mousemove", "--window", window, 300, 450)
-xdo("mouseup", 1)
-changed(face, capture("cube-drag"), "Cube drag did not orbit")
 # Both origins must apply exactly the same scene controls.
 for button in (1, 3):
     key("r")
-    xdo("mousemove", "--window", window, 72, 656)
+    xdo("mousemove", "--window", window, 58, 670)
     xdo("mousedown", button)
-    xdo("mousemove", "--window", window, 112, 676)
+    xdo("mousemove", "--window", window, 98, 690)
     xdo("mouseup", button)
     from_cube = capture(f"cube-unified-{button}")
     key("r")
@@ -92,17 +83,17 @@ for button in (1, 3):
     xdo("mousemove", "--window", window, 440, 370)
     xdo("mouseup", button)
     from_scene = capture(f"scene-unified-{button}")
-    assert ImageChops.difference(from_cube.crop((200, 40, 1000, 720)), from_scene.crop((200, 40, 1000, 720))).getbbox() is None, "Cube and scene drag differ"
+    assert ImageChops.difference(from_cube, from_scene).getbbox() is None, "Cube and scene drag differ"
 key("r")
-xdo("mousemove", "--window", window, 72, 656)
+xdo("mousemove", "--window", window, 58, 670)
 xdo("click", 4)
 wheel_cube = capture("cube-wheel")
 key("r")
 xdo("mousemove", "--window", window, 400, 350)
 xdo("click", 4)
 wheel_scene = capture("scene-wheel")
-assert ImageChops.difference(wheel_cube.crop((200, 40, 1000, 720)), wheel_scene.crop((200, 40, 1000, 720))).getbbox() is None, "Cube and scene wheel differ"
-assert wheel_scene.getpixel((16, 602)) == (49, 55, 65), "Cube backing is not opaque"
+assert ImageChops.difference(wheel_cube, wheel_scene).getbbox() is None, "Cube and scene wheel differ"
+assert wheel_scene.getpixel((16, 630)) == wheel_scene.getpixel((180, 630)), "Cube has a separate background"
 key("r")
 xdo("mousemove", "--window", window, 400, 350)
 scale_base = capture("scale-base")

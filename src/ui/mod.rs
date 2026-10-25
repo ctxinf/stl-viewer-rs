@@ -10,7 +10,6 @@ pub struct Ui {
     pub error: Option<String>,
     pub menu_height: f32,
     pub cube: view_cube::ViewCube,
-    pub hud_rect: Option<egui::Rect>,
     pub viewport: ViewportRect,
 }
 impl Ui {
@@ -86,26 +85,23 @@ impl Ui {
                     }
                 });
         }
-        self.hud_rect = None;
         if app.show_cube {
             let screen = ctx.content_rect();
             let available = (screen.height() - self.menu_height - 64.).max(0.);
-            let side = 120f32.min(available).min((screen.width() - 24.).max(0.));
+            let side = 92f32.min(available).min((screen.width() - 24.).max(0.));
             if side >= 40. {
                 let pos = egui::pos2(screen.left() + 12., screen.bottom() - side - 44.);
-                let enabled = !self.modal() && !ctx.is_popup_open();
-                let hud = egui::Area::new("hud".into())
+                egui::Area::new("hud".into())
                     .order(egui::Order::Background)
                     .fade_in(false)
                     .fixed_pos(pos)
+                    .movable(false)
+                    .interactable(false)
                     .show(ctx, |ui| {
                         ui.set_min_size(egui::vec2(side, side));
                         ui.set_max_size(egui::vec2(side, side));
-                        if let Some(view) = self.cube.draw(ui, &app.camera, enabled) {
-                            actions.push(Action::SetView(view));
-                        }
+                        self.cube.draw(ui, &app.camera);
                     });
-                self.hud_rect = Some(hud.response.rect);
             }
         }
         if app.show_zoom && model.is_some() {
@@ -115,6 +111,8 @@ impl Ui {
                     .order(egui::Order::Background)
                     .fade_in(false)
                     .fixed_pos(egui::pos2(screen.left() + 12., screen.bottom() - 32.))
+                    .movable(false)
+                    .interactable(false)
                     .show(ctx, |ui| {
                         ui.colored_label(
                             egui::Color32::from_rgb(255, 196, 112),
@@ -124,7 +122,7 @@ impl Ui {
             }
         }
         egui::Window::new("Controls").open(&mut self.help).resizable(false).show(ctx,|ui| {
-            ui.label("Left drag: orbit · Right drag: pan · Wheel: zoom\nO / Ctrl+O: open · R: reset / fit · W: wireframe\nF1: controls · Esc: close menus / dialogs, then exit\nCube: click a face for a standard view. Drag and wheel work as in the scene.\nZoom: 100% is the initial fitted size; R restores 100%.\nSTL stores coordinates without reliable physical units.");
+            ui.label("Left drag: orbit · Right drag: pan · Wheel: zoom\nO / Ctrl+O: open · R: reset / fit · W: wireframe\nF1: controls · Esc: close menus / dialogs, then exit\nCube: orientation display only; all mouse controls pass through to the scene.\nZoom: 100% is the initial fitted size; R restores 100%.\nSTL stores coordinates without reliable physical units.");
         });
         egui::Window::new("About")
             .open(&mut self.about)

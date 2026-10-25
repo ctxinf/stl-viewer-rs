@@ -37,24 +37,6 @@ pub fn project(rotation: Quat, rect: Rect) -> Vec<Face> {
     faces.sort_by(|a, b| a.depth.total_cmp(&b.depth));
     faces
 }
-pub fn hit(faces: &[Face], p: Pos2) -> Option<View> {
-    faces
-        .iter()
-        .rev()
-        .find(|face| {
-            let mut positive = false;
-            let mut negative = false;
-            for i in 0..4 {
-                let a = face.points[i];
-                let b = face.points[(i + 1) % 4];
-                let c = (b.x - a.x) * (p.y - a.y) - (b.y - a.y) * (p.x - a.x);
-                positive |= c > 0.001;
-                negative |= c < -0.001;
-            }
-            !(positive && negative)
-        })
-        .map(|f| f.view)
-}
 // Map glyph vertices onto the same orthographic face plane as the cube.
 // Keeping the text in world space makes its tilt and foreshortening match the face.
 fn face_label(ui: &egui::Ui, rotation: Quat, rect: Rect, view: View) {
@@ -95,22 +77,14 @@ fn face_label(ui: &egui::Ui, rotation: Quat, rect: Rect, view: View) {
 #[derive(Default)]
 pub struct ViewCube;
 impl ViewCube {
-    pub fn draw(&mut self, ui: &mut egui::Ui, camera: &Camera, enabled: bool) -> Option<View> {
-        let (rect, response) = ui.allocate_exact_size(
-            Vec2::splat(120.).min(ui.available_size()),
-            egui::Sense::click(),
+    pub fn draw(&mut self, ui: &mut egui::Ui, camera: &Camera) {
+        let (rect, _) = ui.allocate_exact_size(
+            Vec2::splat(92.).min(ui.available_size()),
+            egui::Sense::hover(),
         );
-        // An opaque backing also hides scene geometry between the cube and its axes.
-        ui.painter()
-            .rect_filled(rect, 6., Color32::from_rgb(49, 55, 65));
         let faces = project(camera.rotation, rect);
-        let hover = response.hover_pos().and_then(|p| hit(&faces, p));
         for face in &faces {
-            let color = if hover == Some(face.view) && enabled {
-                Color32::from_rgb(174, 205, 225)
-            } else {
-                Color32::from_gray(172 + (face.depth * 44.) as u8)
-            };
+            let color = Color32::from_gray(172 + (face.depth * 44.) as u8);
             ui.painter().add(egui::Shape::convex_polygon(
                 face.points.clone(),
                 color,
@@ -145,25 +119,20 @@ impl ViewCube {
                 );
             }
         }
-        if enabled && response.clicked() {
-            return response.interact_pointer_pos().and_then(|p| hit(&faces, p));
-        }
-        None
     }
 }
 #[cfg(test)]
 mod tests {
     use super::*;
     #[test]
-    fn face_centers_hit_visible_faces() {
-        let rect = Rect::from_min_size(Pos2::ZERO, Vec2::splat(120.));
+    fn standard_views_only_project_the_facing_face() {
+        let rect = Rect::from_min_size(Pos2::ZERO, Vec2::splat(92.));
         let mut camera = Camera::default();
         for view in View::ALL {
             camera.set_view(view);
             let faces = project(camera.rotation, rect);
             assert_eq!(faces.len(), 1);
-            assert_eq!(hit(&faces, rect.center()), Some(view));
-            assert_eq!(hit(&faces, Pos2::new(-20., -20.)), None);
+            assert_eq!(faces[0].view, view);
         }
     }
 }
