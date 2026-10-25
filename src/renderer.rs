@@ -13,9 +13,9 @@ impl Renderer {
         )?;
         Ok(Self { program })
     }
-    pub fn draw(
+    pub fn draw<S: Surface>(
         &self,
-        frame: &mut glium::Frame,
+        frame: &mut S,
         buffer: &glium::VertexBuffer<Vertex>,
         matrix: glam::Mat4,
         v: ViewportRect,

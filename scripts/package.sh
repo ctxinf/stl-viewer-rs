@@ -5,9 +5,10 @@ version=${1:?usage: package.sh VERSION}
 root=$(pwd)
 stage="$root/target/package-root"
 rm -rf "$stage"
-mkdir -p "$stage/usr/bin" "$stage/usr/share/applications" "$stage/usr/share/icons/hicolor/scalable/apps" "$stage/usr/share/licenses/stl-viewer-linux" dist
+mkdir -p "$stage/usr/share/icons/hicolor/128x128/apps" "$stage/usr/bin" "$stage/usr/share/applications" "$stage/usr/share/icons/hicolor/scalable/apps" "$stage/usr/share/licenses/stl-viewer-linux" dist
 install -m755 target/release/stl-viewer-linux "$stage/usr/bin/"
 install -m644 packaging/stl-viewer-linux.desktop "$stage/usr/share/applications/"
+install -m644 packaging/stl-viewer-linux.png "$stage/usr/share/icons/hicolor/128x128/apps/"
 install -m644 packaging/stl-viewer-linux.svg "$stage/usr/share/icons/hicolor/scalable/apps/"
 install -m644 LICENSE "$stage/usr/share/licenses/stl-viewer-linux/"
 tar -C "$stage" -czf "dist/stl-viewer-linux-${version}-x86_64.tar.gz" usr

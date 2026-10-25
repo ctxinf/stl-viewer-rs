@@ -1,6 +1,7 @@
 use crate::mesh::Vertex;
 pub type Display = glium::Display<glium::glutin::surface::WindowSurface>;
 pub struct ModelState {
+    pub screenshot_name: std::ffi::OsString,
     pub buffer: glium::VertexBuffer<Vertex>,
     pub triangles: usize,
     pub center: [f64; 3],
@@ -10,6 +11,7 @@ pub struct ModelState {
 
 pub enum Action {
     Open,
+    Screenshot,
     Reset,
     SetView(crate::camera::View),
     ToggleWireframe,
@@ -18,6 +20,7 @@ pub enum Action {
 pub struct AppState {
     pub camera: crate::camera::Camera,
     pub wire: bool,
+    pub background: [u8; 3],
     pub show_cube: bool,
     pub show_zoom: bool,
 }
@@ -26,6 +29,7 @@ impl Default for AppState {
         Self {
             camera: Default::default(),
             wire: false,
+            background: crate::settings::load(),
             show_cube: true,
             show_zoom: true,
         }
@@ -37,7 +41,7 @@ impl AppState {
             Action::Reset => self.camera = Default::default(),
             Action::SetView(view) => self.camera.set_view(view),
             Action::ToggleWireframe => self.wire = !self.wire,
-            Action::Open | Action::Exit => {}
+            Action::Open | Action::Screenshot | Action::Exit => {}
         }
     }
 }

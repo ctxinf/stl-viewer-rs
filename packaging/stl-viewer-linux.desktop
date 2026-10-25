@@ -8,3 +8,4 @@ Terminal=false
 Categories=Graphics;3DGraphics;Viewer;
 MimeType=model/stl;application/sla;application/vnd.ms-pki.stl;
 Keywords=STL;3D;mesh;CAD;
+StartupWMClass=stl-viewer-linux

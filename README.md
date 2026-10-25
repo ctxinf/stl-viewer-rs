@@ -31,13 +31,17 @@ sudo pacman -U ./stl-viewer-linux-0.2.0-1-x86_64.pkg.tar.zst
 ```sh
 stl-viewer-linux model.stl
 stl-viewer-linux                 # 按 O 打开，或拖入 STL
-stl-viewer-linux --info model.stl # 无窗口解析计时、三角形数量和原始包围球信息
+stl-viewer-linux info model.stl   # 无窗口查看三角形数量、包围盒、尺寸、表面积等
+stl-viewer-linux screenshot model.stl -o model.png --width 1600 --height 1200
+# 无桌面环境时可使用 xvfb-run（截图需要 OpenGL 图形上下文）
+xvfb-run -a stl-viewer-linux screenshot model.stl -o model.png
 ```
 
 | 操作 | 功能 |
 | --- | --- |
 | 左键拖动 | 旋转 |
 | 右键拖动 | 平移 |
+| 右键单击 | Reset / Fit 菜单 |
 | 滚轮 | 缩放 |
 | O / Ctrl+O | 打开文件 |
 | R | 恢复视角 |
@@ -47,6 +51,10 @@ stl-viewer-linux --info model.stl # 无窗口解析计时、三角形数量和�
 | Esc | 先关闭菜单或弹窗，再退出 |
 
 STL 保存顶点坐标及相对长度，但没有可靠的物理单位信息，无法仅凭文件确认 mm 或 inch。界面显示缩放百分比：初始适配大小为 100%，R / Reset / Fit 恢复到 100%。选择标准视角保留平移与缩放。View 菜单可分别控制方位控件和缩放百分比的显示。
+
+File → Export screenshot 导出当前视角的 PNG（仅模型视口，不包含菜单及 HUD）。View → Background color 调整背景色并自动保存，下次启动和 CLI 截图均使用该颜色。配置保存在 `$XDG_CONFIG_HOME/stl-viewer-linux/background`，未设置时使用 `~/.config/stl-viewer-linux/background`。CLI 截图默认 1600×1200，宽高范围为 1–8192；`--info` 仍兼容。
+
+桌面文件、X11 WM_CLASS 和 Wayland app_id 统一使用 `stl-viewer-linux`；安装包包含 SVG 和 PNG 图标，X11 窗口也内嵌图标。
 
 读取时请勿同时修改或截断源文件。模型加载目前同步执行，超大文件加载期间窗口可能短暂无响应。标题栏计时包含解析和 GPU 缓冲创建，不包含进程启动和第一帧显示。内存需求约为每三角形 36 字节 CPU 顶点数据与同等 GPU 缓冲，另加映射文件和驱动开销。
 
