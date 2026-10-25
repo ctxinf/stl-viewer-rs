@@ -15,10 +15,12 @@ jobs:
         with:
           components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
       - name: Install build and packaging dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwayland-dev libxkbcommon-dev libegl1-mesa-dev libgl1-mesa-dev libx11-dev libxcursor-dev libxi-dev libxrandr-dev libudev-dev ruby-dev rpm libarchive-tools zstd xvfb xdotool weston imagemagick python3-pil
+          sudo apt-get install -y libwayland-dev libxkbcommon-dev libxkbcommon-x11-0 libegl1-mesa-dev libgl1-mesa-dev libx11-dev libxcursor-dev libxi-dev libxrandr-dev libudev-dev ruby-dev rpm libarchive-tools zstd xvfb xdotool weston imagemagick python3-pil
           sudo gem install fpm --no-document
       - name: Check release version
         run: |
