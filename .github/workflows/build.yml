@@ -38,7 +38,7 @@ jobs:
           cp tests/fixtures/triangle.stl target/triangle.stl
           target/release/stl-viewer-linux --info target/triangle.stl
           xvfb-run -a bash scripts/smoke-x11.sh
-          xvfb-run -a python3 scripts/check-dpi.py
+          xvfb-run -a -s "-screen 0 2560x2048x24" python3 scripts/check-dpi.py
       - name: Wayland smoke test
         run: bash scripts/smoke-wayland.sh
       - name: Package
