@@ -1,6 +1,7 @@
 mod app;
 mod camera;
 mod cli;
+mod dialog;
 mod export;
 mod mesh;
 mod renderer;
@@ -87,7 +88,8 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     } else {
         None
     };
-    let event_loop = winit::event_loop::EventLoop::<Instant>::with_user_event().build()?;
+    let event_loop =
+        winit::event_loop::EventLoop::<dialog::UserEvent>::with_user_event().build()?;
     let mut icon_reader = png::Decoder::new(std::io::Cursor::new(include_bytes!(
         "../packaging/stl-viewer-linux.png"
     )))
@@ -142,12 +144,15 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     let mut egui =
         egui_glium::EguiGlium::new(egui::ViewportId::ROOT, &display, &window, &event_loop);
     let proxy = event_loop.create_proxy();
+    let repaint_proxy = proxy.clone();
     egui.egui_ctx().set_request_repaint_callback(move |info| {
         if let Some(deadline) = Instant::now().checked_add(info.delay) {
-            let _ = proxy.send_event(deadline);
+            let _ = repaint_proxy.send_event(dialog::UserEvent::Repaint(deadline));
         }
     });
     let mut repaint_at: Option<Instant> = None;
+    let mut dialog_pending = false;
+    let mut dialog_result = None;
     let mut modifiers = winit::keyboard::ModifiersState::empty();
     let mut cursor = None;
     let mut left = false;
@@ -196,7 +201,13 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                 target.set_control_flow(winit::event_loop::ControlFlow::WaitUntil(deadline));
             }
         }
-        if let Event::UserEvent(deadline) = event {
+        if let Event::UserEvent(dialog::UserEvent::Dialog(result)) = event {
+            dialog_pending = false;
+            dialog_result = Some(result);
+            window.request_redraw();
+            return;
+        }
+        if let Event::UserEvent(dialog::UserEvent::Repaint(deadline)) = event {
             repaint_at = Some(repaint_at.map_or(deadline, |old| old.min(deadline)));
             if deadline <= Instant::now() {
                 window.request_redraw();
@@ -214,9 +225,17 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         if response.repaint && !matches!(event, WindowEvent::RedrawRequested) {
             window.request_redraw();
         }
-        let blocked = ui.modal() || egui.egui_ctx().is_popup_open() || response.consumed;
+        let blocked =
+            dialog_pending || ui.modal() || egui.egui_ctx().is_popup_open() || response.consumed;
         let mut actions = Vec::new();
         let mut open = None;
+        let mut save = None;
+        if let Some(result) = dialog_result.take() {
+            match result {
+                dialog::Result::Open(path) => open = path,
+                dialog::Result::Screenshot(path) => save = path,
+            }
+        }
         match event {
             WindowEvent::CloseRequested => target.exit(),
             WindowEvent::DroppedFile(path) => open = Some(path),
@@ -307,7 +326,8 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                         ui.help = true
                     }
                     PhysicalKey::Code(key)
-                        if !ui.modal()
+                        if !dialog_pending
+                            && !ui.modal()
                             && !egui.egui_ctx().is_popup_open()
                             && !egui.egui_ctx().wants_keyboard_input() =>
                     {
@@ -366,32 +386,33 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         }
         for action in actions {
             match action {
-                Action::Open => {
-                    open = rfd::FileDialog::new()
-                        .add_filter("STL model", &["stl", "STL"])
-                        .pick_file()
+                Action::Open if !dialog_pending => {
+                    dialog_pending = true;
+                    dialog::show(None, proxy.clone());
                 }
-                Action::Screenshot => {
-                    if let Some(model) = &buffer
-                        && let Some(path) = rfd::FileDialog::new()
-                            .add_filter("PNG image", &["png"])
-                            .set_file_name(model.screenshot_name.to_string_lossy())
-                            .save_file()
-                        && let Err(e) = export::screenshot(
-                            &display,
-                            &renderer,
-                            &model.buffer,
-                            &app,
-                            (ui.viewport.width, ui.viewport.height),
-                            &path,
-                        )
-                    {
-                        ui.error = Some(e.to_string());
+                Action::Screenshot if !dialog_pending => {
+                    if let Some(model) = &buffer {
+                        dialog_pending = true;
+                        dialog::show(Some(model.screenshot_name.clone()), proxy.clone());
                     }
                 }
                 Action::Exit => target.exit(),
                 action => app.apply(action),
             }
+            window.request_redraw();
+        }
+        if let Some(path) = save
+            && let Some(model) = &buffer
+            && let Err(e) = export::screenshot(
+                &display,
+                &renderer,
+                &model.buffer,
+                &app,
+                (ui.viewport.width, ui.viewport.height),
+                &path,
+            )
+        {
+            ui.error = Some(e.to_string());
             window.request_redraw();
         }
         if let Some(path) = open {
