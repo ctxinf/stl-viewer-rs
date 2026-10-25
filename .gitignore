@@ -1,0 +1,8 @@
+/target/
+/dist/
+/.agents/
+/.codex/
+/.aws/
+
+# Local installation helper
+/install-local.sh

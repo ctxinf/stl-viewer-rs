@@ -1,0 +1,18 @@
+[package]
+name = "stl-viewer-linux"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+description = "A small, fast native Linux STL viewer"
+
+[dependencies]
+glium = "0.36"
+glam = "0.30"
+memmap2 = "0.9"
+rfd = "0.15"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = true
+panic = "abort"
