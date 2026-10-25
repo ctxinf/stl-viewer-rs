@@ -342,9 +342,14 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                 if let Some(buffer) = &buffer {
                     let viewport = ui.viewport;
                     let matrix = app.camera.matrix(viewport);
-                    if let Err(e) =
-                        renderer.draw(&mut frame, &buffer.buffer, matrix, viewport, app.wire)
-                    {
+                    if let Err(e) = renderer.draw(
+                        &mut frame,
+                        &buffer.buffer,
+                        matrix,
+                        viewport,
+                        app.wire,
+                        app.model_color,
+                    ) {
                         eprintln!("Render failed: {e}");
                         target.exit();
                     }

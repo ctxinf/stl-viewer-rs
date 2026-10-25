@@ -8,7 +8,7 @@ impl Renderer {
         let program = glium::Program::from_source(
             display,
             "#version 140\nin vec3 position; uniform mat4 matrix; out vec3 pos; void main(){pos=position; gl_Position=matrix*vec4(position,1.0);}",
-            "#version 140\nin vec3 pos; out vec4 color; void main(){vec3 n=normalize(cross(dFdx(pos),dFdy(pos))); float l=0.28+0.72*abs(dot(n,normalize(vec3(0.4,-0.6,1.0)))); color=vec4(vec3(0.32,0.68,0.88)*l,1.0);}",
+            "#version 140\nin vec3 pos; uniform vec3 model_color; out vec4 color; void main(){vec3 n=normalize(cross(dFdx(pos),dFdy(pos))); float l=0.28+0.72*abs(dot(n,normalize(vec3(0.4,-0.6,1.0)))); color=vec4(model_color*l,1.0);}",
             None,
         )?;
         Ok(Self { program })
@@ -20,6 +20,7 @@ impl Renderer {
         matrix: glam::Mat4,
         v: ViewportRect,
         wire: bool,
+        model_color: [u8; 3],
     ) -> Result<(), glium::DrawError> {
         let rect = glium::Rect {
             left: v.left,
@@ -46,7 +47,7 @@ impl Renderer {
             buffer,
             glium::index::NoIndices(glium::index::PrimitiveType::TrianglesList),
             &self.program,
-            &uniform! {matrix:matrix.to_cols_array_2d()},
+            &uniform! {matrix:matrix.to_cols_array_2d(), model_color: model_color.map(|v| v as f32 / 255.)},
             &params,
         )
     }

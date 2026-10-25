@@ -25,3 +25,5 @@ CLI startup and file loading times for three STL samples:
 ## Install
 
 Download the x86_64 package for your distribution from [GitHub Releases](https://github.com/ctxinf/stl-viewer-rs/releases/latest) and open it with your system’s software installer: `.deb` for Debian / Ubuntu, `.rpm` for Fedora, or `.pkg.tar.zst` for Arch / Manjaro. Requires glibc 2.35+ and OpenGL 3.1+.
+
+Choose **View → Colors** to customize the background and model colors. Both are saved for future sessions and used in exported screenshots. Standard STL files contain geometry without model colors.

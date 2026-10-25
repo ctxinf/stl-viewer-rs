@@ -21,6 +21,7 @@ pub struct AppState {
     pub camera: crate::camera::Camera,
     pub wire: bool,
     pub background: [u8; 3],
+    pub model_color: [u8; 3],
     pub show_cube: bool,
     pub show_zoom: bool,
 }
@@ -29,7 +30,8 @@ impl Default for AppState {
         Self {
             camera: Default::default(),
             wire: false,
-            background: crate::settings::load(),
+            background: crate::settings::load("background", crate::settings::DEFAULT),
+            model_color: crate::settings::load("model", crate::settings::DEFAULT_MODEL),
             show_cube: true,
             show_zoom: true,
         }

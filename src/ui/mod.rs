@@ -6,7 +6,7 @@ use crate::{
 #[derive(Default)]
 pub struct Ui {
     pub help: bool,
-    pub background: bool,
+    pub colors: bool,
     pub context_position: Option<egui::Pos2>,
     pub about: bool,
     pub error: Option<String>,
@@ -18,13 +18,13 @@ impl Ui {
     pub fn modal(&self) -> bool {
         self.help
             || self.about
-            || self.background
+            || self.colors
             || self.context_position.is_some()
             || self.error.is_some()
     }
     pub fn close_dialogs(&mut self) {
         self.help = false;
-        self.background = false;
+        self.colors = false;
         self.context_position = None;
         self.about = false;
         self.error = None;
@@ -73,8 +73,8 @@ impl Ui {
                         if ui.checkbox(&mut wire, "Wireframe    W").changed() {
                             actions.push(Action::ToggleWireframe);
                         }
-                        if ui.button("Background color…").clicked() {
-                            self.background = true;
+                        if ui.button("Colors").clicked() {
+                            self.colors = true;
                             ui.close();
                         }
                         ui.separator();
@@ -162,22 +162,39 @@ impl Ui {
                 self.context_position = None;
             }
         }
-        egui::Window::new("Background color")
-            .open(&mut self.background)
+        egui::Window::new("Colors")
+            .open(&mut self.colors)
             .resizable(false)
             .show(ctx, |ui| {
-                let old = app.background;
-                ui.label("Scene background");
-                ui.color_edit_button_srgb(&mut app.background);
-                if ui.button("Restore default").clicked() {
-                    app.background = crate::settings::DEFAULT;
+                for (name, label, color, default) in [
+                    (
+                        "background",
+                        "Background",
+                        &mut app.background,
+                        crate::settings::DEFAULT,
+                    ),
+                    (
+                        "model",
+                        "Model",
+                        &mut app.model_color,
+                        crate::settings::DEFAULT_MODEL,
+                    ),
+                ] {
+                    let old = *color;
+                    ui.horizontal(|ui| {
+                        ui.label(label);
+                        ui.color_edit_button_srgb(color);
+                        if ui.button("Restore default").clicked() {
+                            *color = default;
+                        }
+                    });
+                    if old != *color
+                        && let Err(e) = crate::settings::save(name, *color)
+                    {
+                        self.error = Some(e);
+                    }
                 }
                 ui.small("Saved automatically for future sessions.");
-                if old != app.background
-                    && let Err(e) = crate::settings::save(app.background)
-                {
-                    self.error = Some(e);
-                }
             });
         egui::Window::new("Controls").open(&mut self.help).resizable(false)
             .default_width(420.).show(ctx, |ui| {

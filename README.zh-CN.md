@@ -25,3 +25,5 @@
 ## 安装
 
 从 [GitHub Releases](https://github.com/ctxinf/stl-viewer-rs/releases/latest) 下载对应的 x86_64 安装包，用系统软件安装器打开安装：Debian / Ubuntu 选 `.deb`，Fedora 选 `.rpm`，Arch / Manjaro 选 `.pkg.tar.zst`。需要 glibc 2.35+ 和 OpenGL 3.1+。
+
+通过 **View → Colors** 设置背景色和模型色，设置会自动保存，并应用于导出的截图。标准 STL 文件只包含几何数据，不包含模型颜色。

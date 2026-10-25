@@ -1,15 +1,16 @@
 use std::path::PathBuf;
 pub const DEFAULT: [u8; 3] = [14, 17, 22];
-fn path() -> Result<PathBuf, String> {
+pub const DEFAULT_MODEL: [u8; 3] = [82, 173, 224];
+fn path(name: &str) -> Result<PathBuf, String> {
     let base = std::env::var_os("XDG_CONFIG_HOME")
         .map(PathBuf::from)
         .filter(|p| p.is_absolute())
         .or_else(|| std::env::var_os("HOME").map(|p| PathBuf::from(p).join(".config")))
         .ok_or("Cannot locate configuration directory")?;
-    Ok(base.join("stl-viewer-linux/background"))
+    Ok(base.join("stl-viewer-linux").join(name))
 }
-pub fn load() -> [u8; 3] {
-    path()
+pub fn load(name: &str, default: [u8; 3]) -> [u8; 3] {
+    path(name)
         .ok()
         .and_then(|p| std::fs::read_to_string(p).ok())
         .and_then(|s| {
@@ -19,10 +20,10 @@ pub fn load() -> [u8; 3] {
                 .ok()
         })
         .and_then(|v| v.try_into().ok())
-        .unwrap_or(DEFAULT)
+        .unwrap_or(default)
 }
-pub fn save(color: [u8; 3]) -> Result<(), String> {
-    let path = path()?;
+pub fn save(name: &str, color: [u8; 3]) -> Result<(), String> {
+    let path = path(name)?;
     std::fs::create_dir_all(path.parent().unwrap()).map_err(|e| e.to_string())?;
     let temp = path.with_extension("tmp");
     std::fs::write(&temp, format!("{} {} {}\n", color[0], color[1], color[2]))

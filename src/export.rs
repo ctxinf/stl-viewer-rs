@@ -36,6 +36,7 @@ pub fn screenshot(
         app.camera.matrix(viewport),
         viewport,
         app.wire,
+        app.model_color,
     )?;
     let pixels: Vec<Vec<(u8, u8, u8, u8)>> = texture.read();
     let bytes: Vec<u8> = pixels
