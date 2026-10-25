@@ -1,12 +1,13 @@
 name: Build and release
 on:
+  workflow_dispatch:
   push:
     tags: ['v*']
 permissions:
   contents: read
 jobs:
   linux:
-    if: github.event.created && !github.event.deleted
+    if: github.event_name == 'workflow_dispatch' || (github.event.created && !github.event.deleted)
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
@@ -22,7 +23,7 @@ jobs:
       - name: Check release version
         run: |
           version=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)
-          test "$GITHUB_REF_NAME" = "v$version"
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then test "$GITHUB_REF_NAME" = "v$version"; fi
       - run: cargo fmt --check
       - run: cargo clippy --locked --all-targets -- -D warnings
       - run: cargo test --locked
@@ -43,6 +44,13 @@ jobs:
           version=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)
           if [[ "$GITHUB_REF" == refs/tags/* ]]; then test "$GITHUB_REF_NAME" = "v$version"; fi
           scripts/package.sh "$version"
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: smoke-logs
+          path: |
+            target/*.log
+            target/window-test/
       - uses: actions/upload-artifact@v4
         with:
           name: linux-x86_64

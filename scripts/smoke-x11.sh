@@ -7,7 +7,7 @@ pid=$!
 export VIEWER_PID=$pid
 trap 'kill "$pid" 2>/dev/null || true' EXIT
 for i in {1..100}; do
-  kill -0 "$pid"
+  if ! kill -0 "$pid" 2>/dev/null; then cat target/x11.log; exit 1; fi
   window=$(xdotool search --name 'triangle.stl' 2>/dev/null | head -1 || true)
   if [[ -n "$window" ]]; then
     sleep 1
