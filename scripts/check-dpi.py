@@ -36,8 +36,8 @@ for factor in (1, 1.5, 2):
             data = subprocess.check_output(["import", "-window", window, "png:-"])
             image = Image.open(io.BytesIO(data)).convert("RGB")
             width, height = image.size
-            x, y = int(12 * factor), int(height - 32 * factor)
-            ticks = image.crop((x - 2, y - 3, x + int(130 * factor), y + int(10 * factor)))
+            ticks = image.crop((max(0, width - int(160 * factor)),
+                                int(30 * factor), width, int(80 * factor)))
             white = sum(1 for r, g, b in ticks.getdata() if r > 200 and 140 < g < 230 and b < 170)
             assert white > 20, (factor, size, white)
             assert process.poll() is None

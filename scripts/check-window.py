@@ -99,13 +99,13 @@ xdo("mousemove", "--window", window, 400, 350)
 scale_base = capture("scale-base")
 xdo("click", 4)
 scale_zoom = capture("scale-zoom")
-changed(scale_base.crop((0, 720, 180, 760)), scale_zoom.crop((0, 720, 180, 760)), "Zoom percentage did not follow zoom")
+changed(scale_base.crop((820, 30, 1000, 80)), scale_zoom.crop((820, 30, 1000, 80)), "Zoom percentage did not follow zoom")
 key("r")
 xdo("mousedown", 3)
 xdo("mousemove", "--window", window, 500, 380)
 xdo("mouseup", 3)
 scale_pan = capture("scale-pan")
-assert ImageChops.difference(scale_base.crop((0, 720, 180, 760)), scale_pan.crop((0, 720, 180, 760))).getbbox() is None, "Pan moved zoom HUD"
+assert ImageChops.difference(scale_base.crop((820, 30, 1000, 80)), scale_pan.crop((820, 30, 1000, 80))).getbbox() is None, "Pan moved zoom HUD"
 key("r")
 
 # Focus loss clears the scene drag even if its release arrives elsewhere.
