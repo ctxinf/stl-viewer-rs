@@ -1,4 +1,7 @@
-"""Generate a deterministic binary STL for CI without shipping user files."""
+"""Regenerate the original one-triangle CI fixture (MIT).
+
+Usage: python3 scripts/fixture.py tests/fixtures/triangle.stl
+"""
 import struct
 import sys
 with open(sys.argv[1], "wb") as f:

@@ -1,14 +1,12 @@
 name: Build and release
 on:
   push:
-    branches: [main]
     tags: ['v*']
-  pull_request:
-  workflow_dispatch:
 permissions:
   contents: read
 jobs:
   linux:
+    if: github.event.created && !github.event.deleted
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
@@ -21,8 +19,10 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libwayland-dev libxkbcommon-dev libegl1-mesa-dev libgl1-mesa-dev libx11-dev libxcursor-dev libxi-dev libxrandr-dev libudev-dev ruby-dev rpm libarchive-tools zstd xvfb xdotool weston imagemagick python3-pil
           sudo gem install fpm --no-document
-      - name: Resolve dependencies
-        run: test -f Cargo.lock || cargo generate-lockfile
+      - name: Check release version
+        run: |
+          version=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)
+          test "$GITHUB_REF_NAME" = "v$version"
       - run: cargo fmt --check
       - run: cargo clippy --locked --all-targets -- -D warnings
       - run: cargo test --locked
@@ -32,7 +32,7 @@ jobs:
           cargo build --locked --release
       - name: Parser and X11 smoke test
         run: |
-          python3 scripts/fixture.py target/triangle.stl
+          cp tests/fixtures/triangle.stl target/triangle.stl
           target/release/stl-viewer-linux --info target/triangle.stl
           xvfb-run -a bash scripts/smoke-x11.sh
           xvfb-run -a python3 scripts/check-dpi.py
@@ -47,9 +47,30 @@ jobs:
         with:
           name: linux-x86_64
           path: dist/*
+  install-test:
+    needs: linux
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        distro: [ubuntu:22.04, debian:12, fedora:latest, archlinux:latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: linux-x86_64
+          path: dist
+      - name: Install package and exercise installed application
+        run: |
+          docker run --rm -v "$PWD:/work" -w /work "${{ matrix.distro }}" bash scripts/test-install.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: install-${{ strategy.job-index }}
+          path: target/install-test/
   release:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: linux
+    needs: [linux, install-test]
     runs-on: ubuntu-22.04
     permissions:
       contents: write

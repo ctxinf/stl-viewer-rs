@@ -6,3 +6,6 @@
 
 # Local installation helper
 /install-local.sh
+
+# Local planning documents
+/.docs/

@@ -6,7 +6,7 @@ cargo fmt --check
 cargo test --locked
 cargo clippy --locked --all-targets -- -D warnings
 # Explicit allowlist prevents local dotfiles or user models from being published.
-git add .gitignore Cargo.toml Cargo.lock LICENSE README.md src scripts packaging .github
+git add .gitignore Cargo.toml Cargo.lock LICENSE README.md src scripts packaging .github tests docs
 git diff --cached --check
 if ! git diff --cached --quiet; then
   git -c user.name='STL Viewer contributors' -c user.email='contributors@example.invalid' commit -m 'Implement native STL viewer and Linux release automation'
@@ -28,7 +28,6 @@ wait_for_run() {
   [[ -n "$run_id" ]] || { echo 'Workflow did not appear.' >&2; return 1; }
   gh run watch "$run_id" --exit-status
 }
-wait_for_run push main
 if ! git rev-parse "v$version" >/dev/null 2>&1; then git -c user.name='STL Viewer contributors' -c user.email='contributors@example.invalid' tag -a "v$version" -m "Release $version"; fi
 git push origin "v$version"
 wait_for_run push "v$version"
