@@ -31,7 +31,7 @@ if "$VIEWER_BIN" info tests/fixtures/missing.stl; then
   echo 'Missing input unexpectedly succeeded' >&2
   exit 1
 fi
-xvfb-run -a "$VIEWER_BIN" screenshot tests/fixtures/triangle.stl -o target/install-test/export.png --width 640 --height 480
+xvfb-run -a -s "-screen 0 2560x2048x24" "$VIEWER_BIN" screenshot tests/fixtures/triangle.stl -o target/install-test/export.png --width 640 --height 480
 python3 - <<'PY'
 from PIL import Image
 with Image.open('target/install-test/export.png') as image:
@@ -41,5 +41,5 @@ with Image.open('target/install-test/export.png') as image:
 PY
 test -f /usr/share/applications/stl-viewer-linux.desktop
 test -f /usr/share/icons/hicolor/128x128/apps/stl-viewer-linux.png
-xvfb-run -a bash scripts/smoke-x11.sh
+xvfb-run -a -s "-screen 0 2560x2048x24" bash scripts/smoke-x11.sh
 cp target/window-test/filled.png target/install-test/window.png
