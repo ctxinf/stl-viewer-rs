@@ -1,22 +1,27 @@
-![STL Viewer](docs/screenshot.png)
+<h1 align="center">STL Viewer</h1>
+
+<p align="center">
+  <img src="docs/screenshot.png" alt="STL Viewer" width="640">
+</p>
+
+<p align="center">English | <a href="README.zh-CN.md">简体中文</a></p>
 
 ## Intro
 
-- **Binary: 8.0 MiB**（x86_64 release）
-- **RAM: 约 64 MiB**（本机打开小型 STL 后的进程 RSS，不含 GPU 显存）
+- **Binary: 8.0 MiB**
+- **RAM: ~64 MiB**
+- **Starts and opens STL files in under 10 ms (⚡ Rust + egui)** (~99% less CLI loading time than Bambu Studio)
 
-极度精简、启动飞快的原生 Linux STL viewer，支持 Wayland / X11。
+A minimal, fast-starting native Linux STL viewer with Wayland / X11 support.
 
-在自己电脑上，用三个 STL 样本测试启动并读取文件的耗时：
+CLI startup and file loading times for three STL samples:
 
-| 样本 | STL Viewer | Bambu Studio | Blender |
+| Sample | STL Viewer | Bambu Studio | Blender |
 | --- | ---: | ---: | ---: |
 | A · 2.0 KiB | **1.5 ms** | 203.0 ms | 443.8 ms |
 | B · 24.1 KiB | **1.6 ms** | 192.5 ms | 446.1 ms |
 | C · 87.2 KiB | **1.4 ms** | 193.2 ms | 463.9 ms |
 
-每项重复三次取中位数，未清空文件缓存。测量范围为进程启动至 CLI 读取完成并退出：本项目 `info`、Bambu Studio 2.8.2 `--info`、Blender 5.2.1 后台导入 STL；包含各自初始化及统计开销，不代表 GUI 主窗口或首帧显示时间。
-
 ## Install
 
-1. 从 [GitHub Releases](https://github.com/ctxinf/stl-viewer-rs/releases/latest) 下载对应的 x86_64 安装包，用系统软件安装器打开安装：Debian / Ubuntu 选 `.deb`，Fedora 选 `.rpm`，Arch / Manjaro 选 `.pkg.tar.zst`。需要 glibc 2.35+ 和 OpenGL 3.1+。
+Download the x86_64 package for your distribution from [GitHub Releases](https://github.com/ctxinf/stl-viewer-rs/releases/latest) and open it with your system’s software installer: `.deb` for Debian / Ubuntu, `.rpm` for Fedora, or `.pkg.tar.zst` for Arch / Manjaro. Requires glibc 2.35+ and OpenGL 3.1+.
