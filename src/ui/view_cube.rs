@@ -55,15 +55,6 @@ pub fn hit(faces: &[Face], p: Pos2) -> Option<View> {
         })
         .map(|f| f.view)
 }
-fn sphere(p: Pos2, rect: Rect) -> Vec3 {
-    let v = (p - rect.center()) / (rect.width().min(rect.height()) * 0.5);
-    let length = v.length_sq();
-    if length <= 1. {
-        Vec3::new(v.x, -v.y, (1. - length).sqrt())
-    } else {
-        Vec3::new(v.x, -v.y, 0.).normalize()
-    }
-}
 // Map glyph vertices onto the same orthographic face plane as the cube.
 // Keeping the text in world space makes its tilt and foreshortening match the face.
 fn face_label(ui: &egui::Ui, rotation: Quat, rect: Rect, view: View) {
@@ -102,47 +93,16 @@ fn face_label(ui: &egui::Ui, rotation: Quat, rect: Rect, view: View) {
     }
 }
 #[derive(Default)]
-pub struct ViewCube {
-    previous: Option<Pos2>,
-    canceled: bool,
-}
+pub struct ViewCube;
 impl ViewCube {
-    pub fn cancel(&mut self) {
-        self.previous = None;
-        self.canceled = true;
-    }
-    pub fn draw(&mut self, ui: &mut egui::Ui, camera: &mut Camera, enabled: bool) -> Option<View> {
+    pub fn draw(&mut self, ui: &mut egui::Ui, camera: &Camera, enabled: bool) -> Option<View> {
         let (rect, response) = ui.allocate_exact_size(
             Vec2::splat(120.).min(ui.available_size()),
-            egui::Sense::click_and_drag(),
+            egui::Sense::click(),
         );
-        if !enabled {
-            self.cancel();
-        }
-        if enabled && ui.input(|i| i.pointer.any_pressed()) {
-            self.canceled = false;
-        }
-        if enabled && !self.canceled && response.drag_started() {
-            self.previous = response
-                .interact_pointer_pos()
-                .map(|p| p - response.drag_delta());
-        }
-        if enabled
-            && !self.canceled
-            && response.dragged()
-            && let Some(p) = response.interact_pointer_pos()
-        {
-            if let Some(previous) = self.previous {
-                camera.rotation =
-                    (Quat::from_rotation_arc(sphere(previous, rect), sphere(p, rect))
-                        * camera.rotation)
-                        .normalize();
-            }
-            self.previous = Some(p);
-        }
-        if response.drag_stopped() {
-            self.previous = None;
-        }
+        // An opaque backing also hides scene geometry between the cube and its axes.
+        ui.painter()
+            .rect_filled(rect, 6., Color32::from_rgb(49, 55, 65));
         let faces = project(camera.rotation, rect);
         let hover = response.hover_pos().and_then(|p| hit(&faces, p));
         for face in &faces {
@@ -185,7 +145,7 @@ impl ViewCube {
                 );
             }
         }
-        if enabled && !self.canceled && response.clicked() {
+        if enabled && response.clicked() {
             return response.interact_pointer_pos().and_then(|p| hit(&faces, p));
         }
         None
@@ -205,10 +165,5 @@ mod tests {
             assert_eq!(hit(&faces, rect.center()), Some(view));
             assert_eq!(hit(&faces, Pos2::new(-20., -20.)), None);
         }
-    }
-    #[test]
-    fn arcball_is_finite_outside() {
-        let rect = Rect::from_min_size(Pos2::ZERO, Vec2::splat(120.));
-        assert!((sphere(Pos2::new(1000., 1000.), rect).length() - 1.).abs() < 1e-6);
     }
 }

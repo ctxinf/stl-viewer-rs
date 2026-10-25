@@ -107,11 +107,12 @@ impl Ui {
                 let enabled = !self.modal() && !ctx.is_popup_open();
                 let hud = egui::Area::new("hud".into())
                     .order(egui::Order::Background)
+                    .fade_in(false)
                     .fixed_pos(pos)
                     .show(ctx, |ui| {
                         ui.set_min_size(egui::vec2(side, side));
                         ui.set_max_size(egui::vec2(side, side));
-                        if let Some(view) = self.cube.draw(ui, &mut app.camera, enabled) {
+                        if let Some(view) = self.cube.draw(ui, &app.camera, enabled) {
                             actions.push(Action::SetView(view));
                         }
                     });
