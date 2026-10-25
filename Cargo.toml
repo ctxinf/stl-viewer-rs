@@ -10,6 +10,8 @@ glium = "0.36"
 glam = "0.30"
 memmap2 = "0.9"
 rfd = "0.15"
+egui_glium = { version = "=0.33.2", default-features = false }
+egui = "=0.33.2"
 
 [profile.release]
 lto = "thin"

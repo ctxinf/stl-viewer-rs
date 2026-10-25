@@ -2,7 +2,9 @@ mod app;
 mod camera;
 mod mesh;
 mod renderer;
-use camera::{Camera, ViewportRect};
+mod ui;
+use app::{Action, AppState};
+use camera::ViewportRect;
 use mesh::Vertex;
 glium::implement_vertex!(Vertex, position);
 
@@ -56,18 +58,28 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     if args.next().is_some() {
         return Err("Expected one STL file; use --help".into());
     }
-    let event_loop = winit::event_loop::EventLoop::new()?;
+    let event_loop = winit::event_loop::EventLoop::<Instant>::with_user_event().build()?;
     let (window, display) = glium::backend::glutin::SimpleWindowBuilder::new()
         .with_title("STL Viewer — O: open / drop an STL")
         .with_inner_size(1000, 760)
         .build(&event_loop);
     let renderer = renderer::Renderer::new(&display)?;
     let mut buffer = None;
-    let mut camera = Camera::default();
+    let mut app = AppState::default();
+    let mut ui = ui::Ui::default();
+    let mut egui =
+        egui_glium::EguiGlium::new(egui::ViewportId::ROOT, &display, &window, &event_loop);
+    let proxy = event_loop.create_proxy();
+    egui.egui_ctx().set_request_repaint_callback(move |info| {
+        if let Some(deadline) = Instant::now().checked_add(info.delay) {
+            let _ = proxy.send_event(deadline);
+        }
+    });
+    let mut repaint_at: Option<Instant> = None;
+    let mut modifiers = winit::keyboard::ModifiersState::empty();
     let mut cursor = None;
     let mut left = false;
     let mut right = false;
-    let mut wire = false;
     let load = |path: PathBuf| -> Result<app::ModelState, String> {
         let start = Instant::now();
         let mesh = open_mesh(&path)?;
@@ -92,6 +104,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             Ok(b) => buffer = Some(b),
             Err(e) => {
                 window.set_title(&format!("STL Viewer — {e} — O to open"));
+                ui.error = Some(e.clone());
                 eprintln!("{e}");
             }
         }
@@ -99,9 +112,34 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     #[allow(deprecated)]
     event_loop.run(|event, target| {
         target.set_control_flow(winit::event_loop::ControlFlow::Wait);
+        if let Some(deadline) = repaint_at {
+            if Instant::now() >= deadline {
+                window.request_redraw();
+                repaint_at = None;
+            } else {
+                target.set_control_flow(winit::event_loop::ControlFlow::WaitUntil(deadline));
+            }
+        }
+        if let Event::UserEvent(deadline) = event {
+            repaint_at = Some(repaint_at.map_or(deadline, |old| old.min(deadline)));
+            if deadline <= Instant::now() {
+                window.request_redraw();
+            } else {
+                target.set_control_flow(winit::event_loop::ControlFlow::WaitUntil(
+                    repaint_at.unwrap(),
+                ));
+            }
+            return;
+        }
         let Event::WindowEvent { event, .. } = event else {
             return;
         };
+        let response = egui.on_event(&window, &event);
+        if response.repaint && !matches!(event, WindowEvent::RedrawRequested) {
+            window.request_redraw();
+        }
+        let blocked = response.consumed || ui.modal() || egui.egui_ctx().is_popup_open();
+        let mut actions = Vec::new();
         let mut open = None;
         match event {
             WindowEvent::CloseRequested => target.exit(),
@@ -110,7 +148,11 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                 display.resize(size.into());
                 window.request_redraw();
             }
+            WindowEvent::ModifiersChanged(value) => modifiers = value.state(),
             WindowEvent::MouseInput { state, button, .. } => {
+                if state == ElementState::Pressed && blocked {
+                    return;
+                }
                 if button == MouseButton::Left {
                     left = state == ElementState::Pressed;
                 }
@@ -132,12 +174,14 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                     let dx = (position.x - x) as f32;
                     let dy = (position.y - y) as f32;
                     if left {
-                        camera.orbit(dx, dy);
+                        app.camera.orbit(dx, dy);
                     }
                     if right {
-                        let h = window.inner_size().height.max(1) as f32;
-                        camera.pan[0] += dx / h * 2.8 / camera.zoom;
-                        camera.pan[1] -= dy / h * 2.8 / camera.zoom;
+                        let h = (window.inner_size().height as f32
+                            - ui.menu_height * egui.egui_ctx().pixels_per_point())
+                        .max(1.);
+                        app.camera.pan[0] += dx / h * 2.8 / app.camera.zoom;
+                        app.camera.pan[1] -= dy / h * 2.8 / app.camera.zoom;
                     }
                     if left || right {
                         window.request_redraw();
@@ -145,27 +189,43 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                 }
                 cursor = Some((position.x, position.y));
             }
-            WindowEvent::MouseWheel { delta, .. } => {
+            WindowEvent::MouseWheel { delta, .. } if !blocked => {
                 let d = match delta {
                     MouseScrollDelta::LineDelta(_, y) => y,
                     MouseScrollDelta::PixelDelta(p) => p.y as f32 / 40.,
                 };
-                camera.zoom = (camera.zoom * (d * 0.12).exp()).clamp(0.02, 100.);
+                app.camera.zoom = (app.camera.zoom * (d * 0.12).exp()).clamp(0.02, 100.);
                 window.request_redraw();
             }
             WindowEvent::KeyboardInput { event, .. }
                 if event.state == ElementState::Pressed && !event.repeat =>
             {
                 match event.physical_key {
-                    PhysicalKey::Code(KeyCode::Escape) => target.exit(),
-                    PhysicalKey::Code(KeyCode::KeyR) => {
-                        camera = Camera::default();
+                    PhysicalKey::Code(KeyCode::Escape) => {
+                        if ui.modal() {
+                            ui.close_dialogs();
+                        } else if egui.egui_ctx().is_popup_open() {
+                            egui::Popup::close_all(egui.egui_ctx());
+                        } else {
+                            actions.push(Action::Exit);
+                        }
                     }
-                    PhysicalKey::Code(KeyCode::KeyW) => wire = !wire,
-                    PhysicalKey::Code(KeyCode::KeyO) => {
-                        open = rfd::FileDialog::new()
-                            .add_filter("STL model", &["stl", "STL"])
-                            .pick_file()
+                    PhysicalKey::Code(KeyCode::F1) if !egui.egui_ctx().wants_keyboard_input() => {
+                        ui.help = true
+                    }
+                    PhysicalKey::Code(key)
+                        if !ui.modal()
+                            && !egui.egui_ctx().is_popup_open()
+                            && !egui.egui_ctx().wants_keyboard_input() =>
+                    {
+                        match key {
+                            KeyCode::KeyR => actions.push(Action::Reset),
+                            KeyCode::KeyW => actions.push(Action::ToggleWireframe),
+                            KeyCode::KeyO if modifiers.is_empty() || modifiers.control_key() => {
+                                actions.push(Action::Open)
+                            }
+                            _ => {}
+                        }
                     }
                     _ => {}
                 }
@@ -176,6 +236,10 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                 if size.width == 0 || size.height == 0 {
                     return;
                 }
+                egui.run(&window, |ctx| {
+                    actions.extend(ui.draw(ctx, &mut app, buffer.as_ref()));
+                });
+
                 let mut frame = display.draw();
                 frame.clear_color_and_depth((0.055, 0.065, 0.085, 1.), 1.);
                 if let Some(buffer) = &buffer {
@@ -183,16 +247,23 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                         left: 0,
                         bottom: 0,
                         width: size.width,
-                        height: size.height,
+                        height: size
+                            .height
+                            .saturating_sub(
+                                (ui.menu_height * egui.egui_ctx().pixels_per_point()).round()
+                                    as u32,
+                            )
+                            .max(1),
                     };
-                    let matrix = camera.matrix(viewport);
+                    let matrix = app.camera.matrix(viewport);
                     if let Err(e) =
-                        renderer.draw(&mut frame, &buffer.buffer, matrix, viewport, wire)
+                        renderer.draw(&mut frame, &buffer.buffer, matrix, viewport, app.wire)
                     {
                         eprintln!("Render failed: {e}");
                         target.exit();
                     }
                 }
+                egui.paint(&display, &mut frame);
                 if let Err(e) = frame.finish() {
                     eprintln!("Present failed: {e}");
                     target.exit();
@@ -200,14 +271,27 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             }
             _ => {}
         }
+        for action in actions {
+            match action {
+                Action::Open => {
+                    open = rfd::FileDialog::new()
+                        .add_filter("STL model", &["stl", "STL"])
+                        .pick_file()
+                }
+                Action::Exit => target.exit(),
+                action => app.apply(action),
+            }
+            window.request_redraw();
+        }
         if let Some(path) = open {
             match load(path) {
                 Ok(b) => {
                     buffer = Some(b);
-                    camera = Camera::default();
+                    app.apply(Action::Reset);
                 }
                 Err(e) => {
                     window.set_title(&format!("STL Viewer — {e} — O to retry"));
+                    ui.error = Some(e.clone());
                     eprintln!("{e}");
                 }
             }
