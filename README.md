@@ -33,7 +33,3 @@ Choose the 0.4.x download for your OS and architecture from [GitHub Releases](ht
 | macOS | Intel, Apple Silicon | Extract `.zip`, move `STL Viewer.app` to Applications |
 
 Linux requires glibc 2.35+ and OpenGL 3.1+; macOS requires OpenGL 3.2+; Windows requires a graphics driver providing OpenGL 3.1+. ARM means 64-bit ARM; ARMv7 is not included. macOS bundles are ad-hoc signed and not notarized by Apple, so Gatekeeper may block the first launch. Windows binaries are unsigned.
-
-Size, memory and timing figures above are earlier Linux x86_64 measurements; other platforms and architectures may differ. Build from source with `cargo build --release --locked`. For compatibility, the Cargo package and source-built executable remain named `stl-viewer-linux` (`.exe` on Windows).
-
-Choose **View → Colors** to customize the background and model colors. Both are saved for future sessions and used in exported screenshots. Standard STL files contain geometry without model colors.
