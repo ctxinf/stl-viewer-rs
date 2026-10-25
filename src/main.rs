@@ -48,7 +48,9 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                 std::array::from_fn(|i| mesh.bounds[1][i] - mesh.bounds[0][i]);
             let area: f64 = mesh
                 .vertices
-                .chunks_exact(3)
+                .as_chunks::<3>()
+                .0
+                .iter()
                 .map(|t| {
                     let a = glam::DVec3::from_array(t[0].position.map(f64::from));
                     let b = glam::DVec3::from_array(t[1].position.map(f64::from));

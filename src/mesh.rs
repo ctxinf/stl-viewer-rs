@@ -21,8 +21,8 @@ impl Mesh {
             vertices
                 .try_reserve_exact(count.checked_mul(3).ok_or("Too many triangles")?)
                 .map_err(|_| "Not enough memory")?;
-            for face in data[84..].chunks_exact(50) {
-                for v in face[12..48].chunks_exact(12) {
+            for face in data[84..].as_chunks::<50>().0 {
+                for v in face[12..48].as_chunks::<12>().0 {
                     vertices.push(Vertex {
                         position: std::array::from_fn(|i| {
                             f32::from_le_bytes(v[i * 4..i * 4 + 4].try_into().unwrap())

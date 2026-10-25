@@ -88,7 +88,7 @@ impl ViewCube {
             ui.painter().add(egui::Shape::convex_polygon(
                 face.points.clone(),
                 color,
-                Stroke::new(0.7, Color32::from_gray(190)),
+                Stroke::new(0.7_f32, Color32::from_gray(190)),
             ));
             if face.depth > 0.18 {
                 face_label(ui, camera.rotation, rect, face.view);
@@ -109,7 +109,7 @@ impl ViewCube {
             let end = project_point(corner + axis * 2.65);
             let delta = end - origin;
             if delta.length() > 5. {
-                ui.painter().arrow(origin, delta, Stroke::new(2., color));
+                ui.painter().arrow(origin, delta, Stroke::new(2_f32, color));
                 ui.painter().text(
                     end + delta.normalized() * 8.,
                     egui::Align2::CENTER_CENTER,
