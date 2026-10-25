@@ -150,7 +150,14 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             }
             WindowEvent::ModifiersChanged(value) => modifiers = value.state(),
             WindowEvent::MouseInput { state, button, .. } => {
-                if state == ElementState::Pressed && blocked {
+                let over_hud = cursor.is_some_and(|(x, y)| {
+                    ui.hud_rect.is_some_and(|rect| {
+                        rect.contains(
+                            egui::pos2(x as f32, y as f32) / egui.egui_ctx().pixels_per_point(),
+                        )
+                    })
+                });
+                if state == ElementState::Pressed && (blocked || over_hud) {
                     return;
                 }
                 if button == MouseButton::Left {
@@ -161,11 +168,14 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
             WindowEvent::CursorLeft { .. } => {
+                ui.cube.cancel();
                 cursor = None;
                 left = false;
                 right = false;
             }
             WindowEvent::Focused(false) => {
+                ui.cube.cancel();
+                cursor = None;
                 left = false;
                 right = false;
             }

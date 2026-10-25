@@ -1,3 +1,4 @@
+mod view_cube;
 use crate::{
     app::{Action, AppState, ModelState},
     camera::View,
@@ -8,6 +9,8 @@ pub struct Ui {
     pub about: bool,
     pub error: Option<String>,
     pub menu_height: f32,
+    pub cube: view_cube::ViewCube,
+    pub hud_rect: Option<egui::Rect>,
 }
 impl Ui {
     pub fn modal(&self) -> bool {
@@ -77,6 +80,27 @@ impl Ui {
                         actions.push(Action::Open);
                     }
                 });
+        }
+        self.hud_rect = None;
+        if app.show_cube {
+            let screen = ctx.content_rect();
+            let available = (screen.height() - self.menu_height - 64.).max(0.);
+            let side = 120f32.min(available).min((screen.width() - 24.).max(0.));
+            if side >= 40. {
+                let pos = egui::pos2(screen.left() + 12., screen.bottom() - side - 44.);
+                let enabled = !self.modal() && !ctx.is_popup_open();
+                let hud = egui::Area::new("hud".into())
+                    .order(egui::Order::Background)
+                    .fixed_pos(pos)
+                    .show(ctx, |ui| {
+                        ui.set_min_size(egui::vec2(side, side));
+                        ui.set_max_size(egui::vec2(side, side));
+                        if let Some(view) = self.cube.draw(ui, &mut app.camera, enabled) {
+                            actions.push(Action::SetView(view));
+                        }
+                    });
+                self.hud_rect = Some(hud.response.rect);
+            }
         }
         egui::Window::new("Controls").open(&mut self.help).resizable(false).show(ctx,|ui| {
             ui.label("Left drag: orbit · Right drag: pan · Wheel: zoom\nO / Ctrl+O: open · R: reset / fit · W: wireframe\nF1: controls · Esc: close menus / dialogs, then exit\nCube: click a face for a standard view; drag to orbit.\nSTL has no units. Default: 1 STL unit = 1 mm.\nUnits interpret input coordinates; they do not resize the model.\nThe orthographic scale bar shows screen distance, not surface measurements.");
