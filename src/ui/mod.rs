@@ -99,8 +99,8 @@ impl Ui {
             egui::Area::new("empty".into())
                 .anchor(egui::Align2::CENTER_CENTER, [0., 0.])
                 .show(ctx, |ui| {
-                    ui.label("Open or drop an STL model");
-                    if ui.button("Open STL…").clicked() {
+                    ui.label("Open or drop an STL, 3MF or OBJ model");
+                    if ui.button("Open model…").clicked() {
                         actions.push(Action::Open);
                     }
                 });
@@ -207,14 +207,14 @@ impl Ui {
                 });
                 ui.add_space(12.); ui.separator(); ui.heading("Keyboard shortcuts"); ui.add_space(8.);
                 egui::Grid::new("keyboard_controls").num_columns(2).spacing([28., 10.]).show(ui, |ui| {
-                    for (key, description) in [("O / Ctrl+O", "Open STL"), ("R", "Reset view and fit model"), ("W", "Toggle wireframe"), ("F1", "Show controls"), ("Esc", "Close menu or dialog; otherwise exit")] {
+                    for (key, description) in [("O / Ctrl+O", "Open model"), ("R", "Reset view and fit model"), ("W", "Toggle wireframe"), ("F1", "Show controls"), ("Esc", "Close menu or dialog; otherwise exit")] {
                         ui.strong(key); ui.label(description); ui.end_row();
                     }
                 });
                 ui.add_space(12.); ui.separator(); ui.heading("View information");
                 ui.label("The orientation cube shows the current view. Drag over it to navigate the scene.");
                 ui.label("100% zoom is the initial fitted size. Reset restores this size.");
-                ui.label("STL coordinates have no reliable physical units.");
+                ui.label("STL and OBJ units are unspecified; 3MF coordinates use millimeters.");
             });
         egui::Window::new("About")
             .open(&mut self.about)
@@ -241,7 +241,10 @@ impl Ui {
             egui::Window::new("Operation failed")
                 .open(&mut open)
                 .show(ctx, |ui| {
-                    ui.label(error);
+                    ui.label(&error);
+                    if ui.button("Copy error").clicked() {
+                        ctx.copy_text(error.clone());
+                    }
                     if ui.button("Close").clicked() {
                         self.error = None;
                     }

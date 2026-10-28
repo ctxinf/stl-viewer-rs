@@ -1,11 +1,11 @@
 [Desktop Entry]
 Type=Application
 Name=STL Viewer
-Comment=View STL models
+Comment=View STL, 3MF and OBJ models
 Exec=stl-viewer-linux %f
 Icon=stl-viewer-linux
 Terminal=false
 Categories=Graphics;3DGraphics;Viewer;
-MimeType=model/stl;application/sla;application/vnd.ms-pki.stl;
-Keywords=STL;3D;mesh;CAD;
+MimeType=model/stl;application/sla;application/vnd.ms-pki.stl;model/3mf;model/obj;
+Keywords=STL;3MF;OBJ;3D;mesh;CAD;
 StartupWMClass=stl-viewer-linux

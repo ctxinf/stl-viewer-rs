@@ -23,7 +23,7 @@ pub fn show(screenshot_name: Option<OsString>, proxy: EventLoopProxy<UserEvent>)
         } else {
             Result::Open(
                 rfd::FileDialog::new()
-                    .add_filter("STL model", &["stl", "STL"])
+                    .add_filter("3D models", &["stl", "3mf", "obj", "STL", "3MF", "OBJ"])
                     .pick_file(),
             )
         };

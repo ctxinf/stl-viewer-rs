@@ -8,6 +8,7 @@ pub struct Mesh {
     pub center: [f64; 3],
     pub bounds: [[f64; 3]; 2],
     pub radius: f64,
+    pub units: String,
 }
 impl Mesh {
     pub fn parse(data: &[u8]) -> Result<Self, String> {
@@ -80,8 +81,12 @@ impl Mesh {
                 return Err("Missing endsolid or trailing data".into());
             }
         }
+        Self::from_vertices(vertices, "unspecified (STL)".into())
+    }
+
+    pub fn from_vertices(mut vertices: Vec<Vertex>, units: String) -> Result<Self, String> {
         if vertices.is_empty() {
-            return Err("STL contains no triangles".into());
+            return Err("Model contains no triangles".into());
         }
         let mut lo = [f32::INFINITY; 3];
         let mut hi = [f32::NEG_INFINITY; 3];
@@ -110,6 +115,7 @@ impl Mesh {
         }
         Ok(Self {
             vertices,
+            units,
             center,
             radius,
             bounds: [lo.map(f64::from), hi.map(f64::from)],

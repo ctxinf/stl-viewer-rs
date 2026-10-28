@@ -10,15 +10,17 @@ pub enum Command {
     Help,
 }
 pub const HELP: &str = "Usage:
-  stl-viewer-linux [FILE.stl]
-  stl-viewer-linux info FILE.stl
-  stl-viewer-linux screenshot FILE.stl -o OUTPUT.png [--width 1600] [--height 1200]
+  stl-viewer-linux [FILE]
+  stl-viewer-linux info FILE
+  stl-viewer-linux screenshot FILE -o OUTPUT.png [--width 1600] [--height 1200]
   stl-viewer-linux --help
+
+Supported models: STL, 3MF, OBJ.
 
 info: report original bounds, dimensions, center, radius, surface area and triangle count.
 screenshot: export a fitted model as PNG, using the saved background color.
 Screenshot requires an OpenGL display (for headless Linux, use xvfb-run).
---info FILE.stl remains supported.";
+--info FILE remains supported.";
 pub fn parse(args: impl IntoIterator<Item = std::ffi::OsString>) -> Result<Command, String> {
     let mut args = args.into_iter();
     let Some(first) = args.next() else {
@@ -32,14 +34,14 @@ pub fn parse(args: impl IntoIterator<Item = std::ffi::OsString>) -> Result<Comma
             Ok(Command::Help)
         }
         Some("info" | "--info") => {
-            let path = args.next().ok_or("info requires FILE.stl")?;
+            let path = args.next().ok_or("info requires FILE")?;
             if args.next().is_some() {
                 return Err("Unexpected info argument".into());
             }
             Ok(Command::Info(path.into()))
         }
         Some("screenshot") => {
-            let input = args.next().ok_or("screenshot requires FILE.stl")?.into();
+            let input = args.next().ok_or("screenshot requires FILE")?.into();
             let mut output = None;
             let mut size = (1600, 1200);
             while let Some(option) = args.next() {
@@ -73,7 +75,7 @@ pub fn parse(args: impl IntoIterator<Item = std::ffi::OsString>) -> Result<Comma
         Some(s) if s.starts_with('-') => Err(format!("Unknown option: {s}")),
         _ => {
             if args.next().is_some() {
-                return Err("Expected one STL file; use --help".into());
+                return Err("Expected one model file; use --help".into());
             }
             Ok(Command::Open(Some(first.into())))
         }

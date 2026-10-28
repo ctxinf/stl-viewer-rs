@@ -12,7 +12,7 @@
 - **内存占用：约 64 MiB**
 - **可以在 10 ms 内启动打开（⚡ Rust + egui）**（CLI 加载耗时比 Bambu Studio 减少约 99%）
 
-极度精简、启动飞快的原生 STL 查看器。0.4.x 支持 Linux（Wayland / X11）、Windows 和 macOS，以及 x86_64 / ARM64 架构。
+极度精简、启动飞快的原生 STL、3MF 和 OBJ 查看器。支持 Linux（Wayland / X11）、Windows 和 macOS，以及 x86_64 / ARM64 架构。
 
 三个 STL 样本的 CLI 启动及文件加载耗时：
 
@@ -24,7 +24,7 @@
 
 ## 安装
 
-从 [GitHub Releases](https://github.com/ctxinf/stl-viewer-rs/releases/latest) 选择对应系统及架构的 0.4.x 安装包：
+从 [GitHub Releases](https://github.com/ctxinf/stl-viewer-rs/releases/latest) 选择对应系统及架构的最新安装包：
 
 | 平台 | 架构 | 安装包 |
 | --- | --- | --- |
@@ -37,3 +37,22 @@ Linux 需要 glibc 2.35+ 和 OpenGL 3.1+；macOS 需要 OpenGL 3.2+；Windows �
 体积、内存和加载耗时为此前 Linux x86_64 测量结果，其他平台和架构可能不同。源码构建：`cargo build --release --locked`。为兼容现有用户，Cargo 包名和源码生成的可执行文件仍为 `stl-viewer-linux`（Windows 为 `.exe`）。
 
 通过 **View → Colors** 设置背景色和模型色，设置会自动保存，并应用于导出的截图。标准 STL 文件只包含几何数据，不包含模型颜色。
+
+
+## 模型格式
+
+打开文件、拖拽、CLI 信息查询和截图导出均支持 STL、OBJ 和 3MF：
+
+```sh
+stl-viewer-linux model.3mf
+stl-viewer-linux info model.obj
+stl-viewer-linux screenshot model.3mf -o preview.png
+```
+
+所有格式均使用设置中的统一模型色，不显示材质、纹理和切片参数。OBJ 支持面索引、负索引和三角扇三角化；任意凹多边形建议先在建模软件中三角化。无需配套 MTL 文件，材质引用会忽略。STL 和 OBJ 的单位不确定。
+
+3MF 读取构建列表中的三角网格，支持嵌套组件、重复实例、摆放变换，以及 Production 扩展引用的包内其他模型文件。跳过不可打印的构建项和修饰对象（`type="other"`）。坐标与尺寸统一转换为毫米；跨模型文件混用单位时会报错。纯切片、体素、布尔和位移几何不渲染。本程序用于查看几何，不编辑切片工程。
+
+上方体积、内存和耗时数据为历史 STL 测量结果，不代表当前多格式版本的实测值。
+
+版本变更记录见 [CHANGELOG.md](CHANGELOG.md)。

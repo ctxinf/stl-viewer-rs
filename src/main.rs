@@ -3,6 +3,7 @@ mod camera;
 mod cli;
 mod dialog;
 mod export;
+mod formats;
 mod mesh;
 mod renderer;
 mod settings;
@@ -26,7 +27,7 @@ fn open_mesh(path: &std::path::Path) -> Result<mesh::Mesh, String> {
     // Read-only mapping is dropped after parsing. The source must not be
     // modified or truncated concurrently while opening it.
     let data = unsafe { memmap2::Mmap::map(&file) }.map_err(|e| e.to_string())?;
-    mesh::Mesh::parse(&data)
+    formats::parse(path, &data)
 }
 
 fn main() {
@@ -60,7 +61,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                 })
                 .sum();
             println!(
-                "File: {}\nBytes: {}\nTriangles: {}\nVertices (with duplicates): {}\nBounds min: {:?}\nBounds max: {:?}\nDimensions: {:?}\nCenter: {:?}\nRadius: {}\nSurface area: {}\nUnits: unspecified (STL)\nParse time: {:.3} ms",
+                "File: {}\nBytes: {}\nTriangles: {}\nVertices (with duplicates): {}\nBounds min: {:?}\nBounds max: {:?}\nDimensions: {:?}\nCenter: {:?}\nRadius: {}\nSurface area: {}\nUnits: {}\nParse time: {:.3} ms",
                 path.display(),
                 std::fs::metadata(&path)?.len(),
                 mesh.vertices.len() / 3,
@@ -71,6 +72,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                 mesh.center,
                 mesh.radius,
                 area,
+                mesh.units,
                 start.elapsed().as_secs_f64() * 1000.
             );
             return Ok(());
@@ -120,7 +122,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     );
     let (window, display) = glium::backend::glutin::SimpleWindowBuilder::new()
         .set_window_builder(attributes)
-        .with_title("STL Viewer — O: open / drop an STL")
+        .with_title("STL Viewer — O: open / drop STL, 3MF or OBJ")
         .with_inner_size(1000, 760)
         .build(&event_loop);
     let renderer = renderer::Renderer::new(&display)?;
@@ -329,11 +331,14 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                         if !dialog_pending
                             && !ui.modal()
                             && !egui.egui_ctx().is_popup_open()
-                            && !egui.egui_ctx().wants_keyboard_input() =>
+                            && !egui.egui_ctx().wants_keyboard_input()
+                            && !response.consumed =>
                     {
                         match key {
-                            KeyCode::KeyR => actions.push(Action::Reset),
-                            KeyCode::KeyW => actions.push(Action::ToggleWireframe),
+                            KeyCode::KeyR if modifiers.is_empty() => actions.push(Action::Reset),
+                            KeyCode::KeyW if modifiers.is_empty() => {
+                                actions.push(Action::ToggleWireframe)
+                            }
                             KeyCode::KeyO if modifiers.is_empty() || modifiers.control_key() => {
                                 actions.push(Action::Open)
                             }
