@@ -51,3 +51,5 @@ All formats use the selected model color; materials, textures and slicer setting
 The size, memory and timing figures above are historical STL measurements, not measurements of the current multi-format build.
 
 See [CHANGELOG.md](CHANGELOG.md) for release history.
+
+Linux Wayland window titles use system font fallback for multilingual filenames. Install fonts for the languages you need (for example, Noto CJK). Source builds also require Fontconfig and FreeType development packages (`libfontconfig1-dev libfreetype6-dev` on Debian/Ubuntu).

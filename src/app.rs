@@ -4,6 +4,7 @@ pub struct ModelState {
     pub screenshot_name: std::ffi::OsString,
     pub buffer: glium::VertexBuffer<Vertex>,
     pub triangles: usize,
+    pub load_time: std::time::Duration,
     pub center: [f64; 3],
     pub radius: f64,
     pub bounds: [[f64; 3]; 2],

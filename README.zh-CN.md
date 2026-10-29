@@ -56,3 +56,5 @@ stl-viewer-linux screenshot model.3mf -o preview.png
 上方体积、内存和耗时数据为历史 STL 测量结果，不代表当前多格式版本的实测值。
 
 版本变更记录见 [CHANGELOG.md](CHANGELOG.md)。
+
+Linux Wayland 标题栏使用系统字体回退显示多语言文件名，请安装对应语言字体（例如 Noto CJK）。源码构建还需要 Fontconfig 和 FreeType 开发包（Debian/Ubuntu：`libfontconfig1-dev libfreetype6-dev`）。

@@ -1,6 +1,6 @@
 [package]
 name = "stl-viewer-linux"
-version = "0.5.1"
+version = "0.5.2"
 edition = "2024"
 license = "MIT"
 description = "A small, fast native STL, 3MF and OBJ viewer for Linux, Windows and macOS"
@@ -16,6 +16,10 @@ egui = "=0.33.2"
 png = "0.18"
 tobj = "4"
 lib3mf-core = "0.4"
+
+# Use system font fallback for multilingual Wayland window titles.
+[target.'cfg(target_os = "linux")'.dependencies]
+winit = { version = "0.30", features = ["wayland-csd-adwaita-crossfont"] }
 
 [profile.release]
 lto = "thin"

@@ -9,6 +9,7 @@ pub struct Ui {
     pub colors: bool,
     pub context_position: Option<egui::Pos2>,
     pub about: bool,
+    pub info: bool,
     pub error: Option<String>,
     pub menu_height: f32,
     pub cube: view_cube::ViewCube,
@@ -18,6 +19,7 @@ impl Ui {
     pub fn modal(&self) -> bool {
         self.help
             || self.about
+            || self.info
             || self.colors
             || self.context_position.is_some()
             || self.error.is_some()
@@ -27,7 +29,31 @@ impl Ui {
         self.colors = false;
         self.context_position = None;
         self.about = false;
+        self.info = false;
         self.error = None;
+    }
+    fn view_menu(&mut self, ui: &mut egui::Ui, app: &mut AppState, actions: &mut Vec<Action>) {
+        if ui.button("Reset / Fit    R").clicked() {
+            actions.push(Action::Reset);
+            ui.close();
+        }
+        for view in View::ALL {
+            if ui.button(view.name()).clicked() {
+                actions.push(Action::SetView(view));
+                ui.close();
+            }
+        }
+        let mut wire = app.wire;
+        if ui.checkbox(&mut wire, "Wireframe    W").changed() {
+            actions.push(Action::ToggleWireframe);
+        }
+        if ui.button("Colors").clicked() {
+            self.colors = true;
+            ui.close();
+        }
+        ui.separator();
+        ui.checkbox(&mut app.show_cube, "Orientation cube");
+        ui.checkbox(&mut app.show_zoom, "Zoom percentage");
     }
     pub fn draw(
         &mut self,
@@ -53,33 +79,20 @@ impl Ui {
                             actions.push(Action::Screenshot);
                             ui.close();
                         }
+                        if ui
+                            .add_enabled(model.is_some(), egui::Button::new("Info"))
+                            .clicked()
+                        {
+                            self.info = true;
+                            ui.close();
+                        }
                         if ui.button("Exit").clicked() {
                             actions.push(Action::Exit);
                             ui.close();
                         }
                     });
                     ui.menu_button("View", |ui| {
-                        if ui.button("Reset / Fit    R").clicked() {
-                            actions.push(Action::Reset);
-                            ui.close();
-                        }
-                        for view in View::ALL {
-                            if ui.button(view.name()).clicked() {
-                                actions.push(Action::SetView(view));
-                                ui.close();
-                            }
-                        }
-                        let mut wire = app.wire;
-                        if ui.checkbox(&mut wire, "Wireframe    W").changed() {
-                            actions.push(Action::ToggleWireframe);
-                        }
-                        if ui.button("Colors").clicked() {
-                            self.colors = true;
-                            ui.close();
-                        }
-                        ui.separator();
-                        ui.checkbox(&mut app.show_cube, "Orientation cube");
-                        ui.checkbox(&mut app.show_zoom, "Zoom percentage");
+                        self.view_menu(ui, app, &mut actions);
                     });
                     ui.menu_button("Help", |ui| {
                         if ui.button("Controls    F1").clicked() {
@@ -145,20 +158,21 @@ impl Ui {
             }
         }
         if let Some(position) = self.context_position {
-            let response = egui::Area::new("scene_context".into())
-                .order(egui::Order::Foreground)
-                .fixed_pos(position)
-                .show(ctx, |ui| {
-                    egui::Frame::popup(ui.style()).show(ui, |ui| {
-                        ui.set_min_width(140.);
-                        if ui.button("Reset / Fit    R").clicked() {
-                            actions.push(Action::Reset);
-                            self.context_position = None;
-                        }
-                    });
-                })
-                .response;
-            if ctx.input(|i| i.pointer.any_pressed()) && !response.contains_pointer() {
+            let mut open = true;
+            egui::Popup::new(
+                egui::Id::new("scene_context"),
+                ctx.clone(),
+                position,
+                egui::LayerId::background(),
+            )
+            .kind(egui::PopupKind::Menu)
+            .layout(egui::Layout::top_down_justified(egui::Align::Min))
+            .style(egui::containers::menu::menu_style)
+            .open_bool(&mut open)
+            .show(|ui| {
+                self.view_menu(ui, app, &mut actions);
+            });
+            if !open {
                 self.context_position = None;
             }
         }
@@ -216,6 +230,23 @@ impl Ui {
                 ui.label("100% zoom is the initial fitted size. Reset restores this size.");
                 ui.label("STL and OBJ units are unspecified; 3MF coordinates use millimeters.");
             });
+        egui::Window::new("Info")
+            .open(&mut self.info)
+            .resizable(false)
+            .show(ctx, |ui| {
+                if let Some(m) = model {
+                    ui.label(format!("Triangles: {}", m.triangles));
+                    ui.label(format!(
+                        "Load time: {:.0} ms",
+                        m.load_time.as_secs_f64() * 1000.
+                    ));
+                    ui.separator();
+                    ui.label(format!(
+                        "Center: {:?}\nBounds: {:?}\nRadius: {}",
+                        m.center, m.bounds, m.radius
+                    ));
+                }
+            });
         egui::Window::new("About")
             .open(&mut self.about)
             .resizable(false)
@@ -229,12 +260,6 @@ impl Ui {
                     "GitHub · ctxinf/stl-viewer-rs",
                     "https://github.com/ctxinf/stl-viewer-rs",
                 );
-                if let Some(m) = model {
-                    ui.label(format!(
-                        "{} triangles\nCenter: {:?}\nBounds: {:?}\nRadius: {}",
-                        m.triangles, m.center, m.bounds, m.radius
-                    ));
-                }
             });
         if let Some(error) = self.error.clone() {
             let mut open = true;
@@ -254,5 +279,63 @@ impl Ui {
             }
         }
         actions
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn context_menu_stays_in_window_and_closes_after_reset() {
+        let ctx = egui::Context::default();
+        let mut ui = Ui {
+            context_position: Some(egui::pos2(790., 590.)),
+            ..Default::default()
+        };
+        let mut app = AppState::default();
+        let mut frame = |events| {
+            let mut actions = Vec::new();
+            let _ = ctx.run(
+                egui::RawInput {
+                    screen_rect: Some(egui::Rect::from_min_size(
+                        egui::Pos2::ZERO,
+                        egui::vec2(800., 600.),
+                    )),
+                    events,
+                    ..Default::default()
+                },
+                |ctx| actions = ui.draw(ctx, &mut app, None, (800, 600)),
+            );
+            actions
+        };
+        // Let egui measure the menu before checking placement and clicking it.
+        for _ in 0..3 {
+            frame(Vec::new());
+        }
+        let rect = ctx
+            .read_response(egui::Id::new("scene_context"))
+            .unwrap()
+            .rect;
+        assert!(rect.right() <= 800. && rect.bottom() <= 600., "{rect:?}");
+        assert!(rect.height() > 200., "The full View menu must be present");
+        let pos = rect.min + egui::vec2(30., 14.);
+        frame(vec![
+            egui::Event::PointerMoved(pos),
+            egui::Event::PointerButton {
+                pos,
+                button: egui::PointerButton::Primary,
+                pressed: true,
+                modifiers: Default::default(),
+            },
+        ]);
+        let actions = frame(vec![egui::Event::PointerButton {
+            pos,
+            button: egui::PointerButton::Primary,
+            pressed: false,
+            modifiers: Default::default(),
+        }]);
+        assert!(actions.iter().any(|action| matches!(action, Action::Reset)));
+        assert!(ui.context_position.is_none());
     }
 }

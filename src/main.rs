@@ -122,7 +122,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     );
     let (window, display) = glium::backend::glutin::SimpleWindowBuilder::new()
         .set_window_builder(attributes)
-        .with_title("STL Viewer — O: open / drop STL, 3MF or OBJ")
+        .with_title("STL Viewer")
         .with_inner_size(1000, 760)
         .build(&event_loop);
     let renderer = renderer::Renderer::new(&display)?;
@@ -165,18 +165,16 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         let mesh = open_mesh(&path)?;
         let buffer =
             glium::VertexBuffer::immutable(&display, &mesh.vertices).map_err(|e| e.to_string())?;
+        let load_time = start.elapsed();
         let name = path.file_name().unwrap_or_default().to_string_lossy();
-        window.set_title(&format!(
-            "{name} — {} triangles — {:.0} ms | O open · R reset · W wireframe",
-            mesh.vertices.len() / 3,
-            start.elapsed().as_secs_f64() * 1000.
-        ));
+        window.set_title(&name);
         let mut screenshot_name = path.file_stem().unwrap_or_default().to_os_string();
         screenshot_name.push("-screenshot.png");
         Ok(app::ModelState {
             screenshot_name,
             buffer,
             triangles: mesh.vertices.len() / 3,
+            load_time,
             center: mesh.center,
             radius: mesh.radius,
             bounds: mesh.bounds,
@@ -186,7 +184,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         match load(path) {
             Ok(b) => buffer = Some(b),
             Err(e) => {
-                window.set_title(&format!("STL Viewer — {e} — O to open"));
+                window.set_title(&format!("STL Viewer — {e}"));
                 ui.error = Some(e.clone());
                 eprintln!("{e}");
             }
@@ -427,7 +425,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                     app.apply(Action::Reset);
                 }
                 Err(e) => {
-                    window.set_title(&format!("STL Viewer — {e} — O to retry"));
+                    window.set_title(&format!("STL Viewer — {e}"));
                     ui.error = Some(e.clone());
                     eprintln!("{e}");
                 }

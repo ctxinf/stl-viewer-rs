@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.5.2
+
+- Fix multilingual Wayland window titles with system font fallback.
+- Show only the filename in the model window title; move triangle count and load time to **File → Info**.
+- Move model geometry details from About to Info.
+- Replace the scene context menu with a standard popup that stays within the window.
+- Include all View menu options in the scene context menu.
+- Add Fontconfig and FreeType dependencies to Linux packages and build setup.
+
 ## 0.5.1
 
 - Allow 3MF geometry to load when optional thumbnail files are missing.

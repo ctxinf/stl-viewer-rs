@@ -23,7 +23,7 @@ Package: stl-viewer-linux
 Version: $version
 Architecture: $deb_arch
 Maintainer: STL Viewer contributors <contributors@example.invalid>
-Depends: libc6 (>= 2.35), libgcc-s1, libegl1, libgl1, libx11-6, libxcursor1, libxi6, libxrandr2, libxkbcommon0, libxkbcommon-x11-0, libwayland-client0
+Depends: libc6 (>= 2.35), libgcc-s1, libfontconfig1, libfreetype6, libegl1, libgl1, libx11-6, libxcursor1, libxi6, libxrandr2, libxkbcommon0, libxkbcommon-x11-0, libwayland-client0
 Recommends: xdg-desktop-portal
 Section: graphics
 Priority: optional
@@ -31,7 +31,7 @@ Description: Native GPU accelerated STL viewer for Wayland and X11
 CONTROL
 dpkg-deb --root-owner-group --build "$stage" "dist/stl-viewer-linux-${version}-${deb_arch}.deb"
 rm -rf "$stage/DEBIAN"
-fpm -s dir -t rpm -n stl-viewer-linux -v "$version" --architecture "$package_arch" --license MIT --description 'Native GPU accelerated STL viewer' --maintainer 'STL Viewer contributors <contributors@example.invalid>' --depends 'libglvnd-egl' --depends 'libglvnd-glx' --depends libX11 --depends libXcursor --depends libXi --depends libXrandr --depends libxkbcommon --depends libxkbcommon-x11 --depends 'libwayland-client.so.0()(64bit)' --depends 'libwayland-egl.so.1()(64bit)' -C "$stage" -p "dist/stl-viewer-linux-${version}-${package_arch}.rpm" usr
+fpm -s dir -t rpm -n stl-viewer-linux -v "$version" --architecture "$package_arch" --license MIT --description 'Native GPU accelerated STL viewer' --maintainer 'STL Viewer contributors <contributors@example.invalid>' --depends fontconfig --depends freetype --depends 'libglvnd-egl' --depends 'libglvnd-glx' --depends libX11 --depends libXcursor --depends libXi --depends libXrandr --depends libxkbcommon --depends libxkbcommon-x11 --depends 'libwayland-client.so.0()(64bit)' --depends 'libwayland-egl.so.1()(64bit)' -C "$stage" -p "dist/stl-viewer-linux-${version}-${package_arch}.rpm" usr
 # Arch package payload and metadata: directly installable using pacman -U.
 rm -rf "$root/target/arch-root"
 cp -a "$stage" "$root/target/arch-root"
@@ -50,6 +50,8 @@ license = MIT
 depend = glibc
 depend = gcc-libs
 depend = libglvnd
+depend = fontconfig
+depend = freetype2
 depend = libx11
 depend = libxcursor
 depend = libxi
