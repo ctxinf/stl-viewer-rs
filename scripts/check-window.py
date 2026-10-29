@@ -35,9 +35,16 @@ def changed(before, after, reason):
     assert ImageChops.difference(before, after).getbbox(), reason
 
 
-filled = capture("filled")
-blue = sum(1 for r, g, b in filled.getdata() if b > r * 1.5 and g > r * 1.3 and b > 50)
-assert blue > 5000, f"Model was not rendered: {blue} model pixels"
+# Software rendering on ARM64 can need several seconds for the first frame.
+# Wait for actual geometry rather than treating window creation as readiness.
+deadline = time.monotonic() + 30
+while True:
+    filled = capture("filled")
+    blue = sum(1 for r, g, b in filled.getdata() if b > r * 1.5 and g > r * 1.3 and b > 50)
+    if blue > 5000:
+        break
+    assert time.monotonic() < deadline, f"Model was not rendered: {blue} model pixels"
+    time.sleep(0.1)
 key("w")
 changed(filled, capture("wireframe"), "Wireframe did not change rendering")
 key("w")
